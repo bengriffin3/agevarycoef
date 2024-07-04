@@ -100,14 +100,14 @@ get_training_sample_id <- function(trait, prop_train) {
   return(id_train)
 }
 
-get_traits <- function(data, trait_id, proj_dir, n_sub) {
+get_traits <- function(data, trait_id, n_sub) {
 
   # load traits
   if (trait_id == 1 || trait_id == 2 || trait_id == 3) {
     trait <- data$vars.cog.best.3[1:n_sub, trait_id]
   } else {
     # if performing PC or CCA, let's use the top 30 cog traits
-    trait <- get_top_30_cog_vars(data, n_sub, proj_dir)
+    trait <- get_top_30_cog_vars(data, n_sub)
   }
 
   return(trait)

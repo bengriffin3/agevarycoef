@@ -2,7 +2,7 @@
 % Please edit documentation in R/verbosity.R
 \name{print_info}
 \alias{print_info}
-\title{Title}
+\title{Prediction information printing}
 \usage{
 print_info(trait, n_feat, n_sub, perc_tn, prof, tap, cov, run_svc)
 }
@@ -27,7 +27,7 @@ print_info(trait, n_feat, n_sub, perc_tn, prof, tap, cov, run_svc)
 Print information
 }
 \description{
-Title
+Prediction information printing
 }
 \examples{
 trait <- 1; n_feat <- 1436; n_sub <- 5000; perc_tn <- 90; prof <- 1;

@@ -71,7 +71,7 @@ get_best_feat_svc <- function(dir, trait_id, n_feat, n_sub, perc_train, prof, ta
     # yhat <- extractorRData(sprintf("%s/yhat_t_%i_n_f_%i_f_1436_n_%i_p_%i_l_%i_ta_%i_c_%s_idp_%i_ica_%i_mi_0.RData",
     #                                dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, idp, ica), 'yhat_svc')
 
-
+    corr_svc <- 0
     yhat <- extractorRData(sprintf("%s/yhat_t_%i_n_f_%i_f_1436_n_%i_p_%i_l_%i_ta_%i_c_%s_idp_%i_ica_%i_mi_0.RData",
                                    dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, idp, ica), 'corr_svc')
 
@@ -147,3 +147,14 @@ run_univ_pred_svc <- function(df_train, id_train_inner, idp, age_train, svc_conf
 
   return(prediction_list)
 }
+
+
+calculate_stats <- function(yhat, df, trait_train, id_train) {
+  stats <- list()
+  stats$se <- (yhat - df$y)^2
+  stats$corr_in <- stats::cor(yhat[id_train], trait_train)
+  stats$corr_out <- stats::cor(yhat[-id_train], df[-id_train, ]$y)
+
+  return(stats)
+}
+
