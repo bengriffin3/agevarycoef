@@ -1,0 +1,346 @@
+library(devtools)
+use_git()
+(x <- "alfa,bravo,charlie,delta")
+strsplit(x, split = ",")
+str(strsplit(x, split = ","))
+unlist(strsplit(x, split = ","))
+strsplit(x, split = ",")[[1]]
+strsplit1 <- function(x, split) {
+strsplit(x, split = split)[[1]]
+}
+strsplit1 <- function(x, split) {
+strsplit(x, split = split)[[1]]
+}
+use_r("strsplit1")
+library(devtools)
+use_r("strsplit1")
+load_all()
+(x <- "alfa,bravo,charlie,delta")
+strsplit1(x, split = ",")
+exists("strsplit1", where = globalenv(), inherits = FALSE)
+load_all()
+strsplit1(x, split = ",")
+(x <- "alfa,bravo,charlie,delta")
+strsplit1(x, split = ",")
+exists("strsplit1", where = globalenv(), inherits = FALSE)
+check()
+use_mit_license()
+installed.packages("roxygen2")
+library("roxygen2")
+document()
+?strsplit1
+check()
+install()
+use_readme_rmd()
+library("devtools")
+use_readme_rmd()
+#usethis::proj_set()
+getwd()
+setwd("/Users/bengriffin/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef")
+use_readme_rmd()
+build_readme()
+check()
+check()
+check()
+check()
+check()
+check()
+check()
+check()
+install()
+use_test()
+load_all()
+test()
+check()
+install.packages(c("devtools", "roxygen2", "testthat", "knitr"))
+install.packages(c("devtools", "roxygen2", "testthat", "knitr"))
+install.packages(c("devtools", "roxygen2", "testthat", "knitr"))
+library(devtools)
+use_devtools()
+ls()
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+proj_dir
+ls
+proj_dir
+check()
+library(agevarycoef)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+getwd()
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+ls()
+print_info(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, run_svc)
+conf
+data
+proj_dir
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+library(agevarycoef)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+idp + n_feat
+idp
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+kidp
+idp
+isp
+idp
+idp:(idp + n_feat)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc_cv.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc_cv.r", echo=TRUE)
+folds
+test_indices <- folds[[fold]]
+train_indices <- setdiff(seq_len(nrow(df_train)), test_indices)
+# Extract training and testing data
+df_train_fold <- df_train[train_indices, ]
+df_test_fold <- df_train[test_indices, ]
+# Replace 'id_train_inner' with 'train_indices'
+id_train_inner <- train_indices
+# run linear univariate predictions
+lm_prediction_list <- run_univ_pred_lm(df_train, id_train_inner, idp)
+id_train_inner <- train_indices
+lm_prediction_list <- run_univ_pred_lm(df_train, id_train_inner, idp)
+head(df_train)
+idp
+final_svc_feature_selected
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc_cv.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+prep_train_data
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc_cv.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/02_univariate_feature_selection_svc.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+df_train
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+x
+head(x)
+y_top_30
+dim(y_top_30)
+dim(x)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+data
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/R/load_data.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+head(yhat)
+head(df_train$y[-id_train_inner])
+prep_train_data
+age_train
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+head(x)
+dim(x)
+x_pca
+x
+head(df_train)
+adf
+df
+df_train
+x_pca
+dim(x_pca
+)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+head(df_tarin)
+head(df_train)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/01_vc_model_implementation.R", echo=TRUE)
+adf_train
+df_train
+df
+head(df)
+dim(df)
+df[1:5,1:5]
+df_train[1:5,1:5]
+df_train$y
+df$y
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/04_CCA_analysis.R", echo=TRUE)
+df_train$y
+# replace y in dataframe with CCA mode
+df_train$y <- cca_mode_1
+# save new trait (i.e., CCA mode 1)
+# we call it trait 999 here
+dir <- paste0(proj_dir, "/feature_selection")
+# save(df_train_all, age_train, id_train,
+#      file = sprintf("%s/train_data_t_999_f_1436_n_%i_p_%i.RData",
+#                     dir, n_sub, perc_train))
+# Assuming 'cc1$xcoef[, 1]' is the variable of interest
+xcoef <- cc1$xcoef[, 1]
+# Find the indices of the largest 10 elements
+largest_indices <- order(xcoef, decreasing = TRUE)[1:30]
+# Get the names of the largest 10 elements
+largest_names <- names(xcoef)[largest_indices]
+# Extract the largest 10 elements
+largest_elements <- xcoef[largest_indices]
+# Optionally, print or use the largest elements
+print(largest_names)
+print(largest_elements)
+# Extract just the numbers using gsub
+largest_numbers <- gsub("x\\.", "", largest_names)
+# Convert the extracted numbers to numeric
+largest_numbers_numeric <- as.numeric(largest_numbers)
+idx_top_30_cca <- largest_numbers_numeric
+# Print the numeric values
+print(largest_numbers_numeric)
+# Save the variable to a file
+save(idx_top_30_cca, file = file.path(proj_dir, "/data/idx_top_30_cca.Rdata"))
+largest_numbers
+largest_numbers_numeric <- as.numeric(largest_numbers)
+cc1 <- cc(x, y_top_30)
+x
+dim(x)
+cc1 <- cc(x[,1:30] , y_top_30)
+cc1
+cc2 <- comput(x[,1:30], y_top_30, cc1)
+# 1) get the first components/mode and get a value for every subject
+# 2) save the first components as 'vars_cog_CCA" or something
+# 3) set it up to do PCA first to go from all 1331 traits to 100 PCs
+#       then CCA on X_PCA and y_PCA where both are 100
+# 4) get a good way of comparing subjects between different things I'm running
+#   i.e. so I can easily compare the CCA component with the first PC, with an
+#   individual trait even though each one might have different numbers of NaNs
+# For these 2 things, run univariate predictions so I have best features
+# selected by tomorrow morning
+# this gives the correlation between each pair of 30 canonical variables
+# e.g., the correlation between CCA mode 1 for X and CCA mode 1 for Y
+# is the first element of this vector (and pretty much the only one I am
+# interested in)
+print(cc1$cor)
+# this gives the coefficients used to generate the canonical variables
+# for Y from the original target traits in Y
+print(cc1$ycoef)
+# so I think this gives the coefficients used to create CCA mode 1
+print(cc1$ycoef[, 1])
+# this gives the coefficients used to generate the canonical variables for X
+# from the original features of X
+print(cc1$xcoef)
+# note that we can only create 30 new canonical variables since we only have
+# 30 cognitive traits (even though we have 100 structural IDPS, because the max
+# number of canonical variables we can make is min(30, 100))
+print(dim(cc1$xcoef))
+# so this gives the coefficients for X used to create CCA mode 1 for X
+print(cc1$xcoef[, 1])
+# I think this gives us the new feature (for this sample)
+print(cc1$scores$yscores[, 1])
+print(length(cc1$scores$yscores[, 1]))
+cca_mode_1 <- cc1$scores$yscores[, 1]#cca_mode_- <- cc0$scores # this also gives the scores
+# replace y in dataframe with CCA mode
+df_train$y <- cca_mode_1
+# save new trait (i.e., CCA mode 1)
+# we call it trait 999 here
+dir <- paste0(proj_dir, "/feature_selection")
+# save(df_train_all, age_train, id_train,
+#      file = sprintf("%s/train_data_t_999_f_1436_n_%i_p_%i.RData",
+#                     dir, n_sub, perc_train))
+# Assuming 'cc1$xcoef[, 1]' is the variable of interest
+xcoef <- cc1$xcoef[, 1]
+# Find the indices of the largest 10 elements
+largest_indices <- order(xcoef, decreasing = TRUE)[1:30]
+# Get the names of the largest 10 elements
+largest_names <- names(xcoef)[largest_indices]
+# Extract the largest 10 elements
+largest_elements <- xcoef[largest_indices]
+# Optionally, print or use the largest elements
+print(largest_names)
+print(largest_elements)
+# Extract just the numbers using gsub
+largest_numbers <- gsub("x\\.", "", largest_names)
+# Convert the extracted numbers to numeric
+largest_numbers_numeric <- as.numeric(largest_numbers)
+idx_top_30_cca <- largest_numbers_numeric
+# Print the numeric values
+print(largest_numbers_numeric)
+# Save the variable to a file
+save(idx_top_30_cca, file = file.path(proj_dir, "/data/idx_top_30_cca.Rdata"))
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/05_feature_selection_svc_combine.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/05_feature_selection_svc_combine.r", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/08_fitler_correlated_features.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/08_fitler_correlated_features.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/08_fitler_correlated_features.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/08_fitler_correlated_features.R", echo=TRUE)
+source("~/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef/scripts/R/08_fitler_correlated_features.R", echo=TRUE)
+rm(list = ls())
+load('/Users/bengriffin/OneDrive - Aarhus Universitet/Dokumenter/git_repos/agevarycoef/results/univariate/train_data_t_999_n_f_1436_f_1436_n_20000_p_90_ica_0.RData')
+# Set the correlation threshold
+cor_threshold <- 0.7
+# Calculate the correlation matrix for the features
+cor_matrix <- cor(df_train[, -1])
+# Find the pairs of features with correlation above the threshold
+high_cor_pairs <- which(abs(cor_matrix) > cor_threshold, arr.ind = TRUE)
+# Filter out the diagonal (self-correlations)
+high_cor_pairs <- high_cor_pairs[high_cor_pairs[, 1] != high_cor_pairs[, 2], ]
+# Create a vector to keep track of columns to remove
+remove_cols <- c()
+# Create a set to keep track of already processed columns
+processed_cols <- c()
+corr_svc_all
+check()
+check()
+install.packages("mass")
+install.packages("MASS")
+library(MASS)
+check()
+library("ggplot2")
+library("agevarycoef")
+check()
+check()
+check()
+install()
+check()
+library(devtools)
+packageVersion("devtools")
+load_all()
+check()
+library(MASS)
+library("MASS)
+library("MASS")
+detach("package:MASS", unload=TRUE)
+detach("package:rainbow", unload=TRUE)
+detach("package:fds", unload=TRUE)
+detach("package:fda", unload=TRUE)
+detach("package:CCA", unload=TRUE)
+detach("package:fda", unload=TRUE)
+detach("package:fds", unload=TRUE)
+detach("package:rainbow", unload=TRUE)
+detach("package:MASS", unload=TRUE)
+detach("package:ipred", unload=TRUE)
+check()
+check()
+install.packages("MASS")
+R.version
+library(MASS)
+sessionInfo()
+install.packages(MASS)
+install.packages("MASS")
+sessionInfo()
+library(MASS)
+sessionInfo()
+check()
+library(devtools)
+check()
+check()
+install.packages("MASS", dependencies = TRUE)
+setwd("/Users/bengriffin/Library/CloudStorage/OneDrive-AarhusUniversitet/Dokumenter/git_repos/agevarycoef")
