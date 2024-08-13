@@ -112,3 +112,10 @@ get_traits <- function(data, trait_id, n_sub) {
 
   return(trait)
 }
+
+
+
+
+
+
+

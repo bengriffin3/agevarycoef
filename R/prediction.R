@@ -149,12 +149,50 @@ run_univ_pred_svc <- function(df_train, id_train_inner, idp, age_train, svc_conf
 }
 
 
-calculate_stats <- function(yhat, df, trait_train, id_train) {
+# calculate_stats <- function(yhat, df, trait_train, id_train) {
+#   stats <- list()
+#   stats$se <- (yhat - df$y)^2
+#   stats$corr_in <- stats::cor(yhat[id_train], trait_train)
+#   stats$corr_out <- stats::cor(yhat[-id_train], df[-id_train, ]$y)
+#
+#   return(stats)
+# }
+
+calculate_stats <- function(y, yhat, id_train) {
   stats <- list()
-  stats$se <- (yhat - df$y)^2
-  stats$corr_in <- stats::cor(yhat[id_train], trait_train)
-  stats$corr_out <- stats::cor(yhat[-id_train], df[-id_train, ]$y)
+  stats$se <- (yhat - y)^2
+  stats$corr_in <- stats::cor(yhat[id_train], y[id_train])
+  stats$corr_out <- stats::cor(yhat[-id_train], y[-id_train])
 
   return(stats)
 }
 
+
+determine_best_svc_features <- function(dir, trait_code, n_feat, n_sub, perc_train, prof, tap, cov, idp_preproc) {
+
+  print("Getting best svc features")
+
+  # 5 is just use the best features, 3 is CCA features
+  if (idp_preproc == 3 || idp_preproc == 5) {
+    best_features_svc <- 1:n_feat
+  } else {
+    best_features_svc <- get_best_feat_svc(dir, trait_code, n_feat, n_sub, perc_train, prof, tap, cov, n_feat, idp_preproc)
+  }
+
+  return(best_features_svc)
+
+}
+
+
+determine_best_linear_features <- function(idp_preproc, df_train, prop_train_inner, n_feat, age_train) {
+
+  if (idp_preproc %in% c(1, 2, 3, 5)) {
+    # if we're running ICA or CCA, just use the extracted features
+    best_features_linear <- 1:n_feat
+  } else {
+    best_features_linear <- get_best_feat_lin(df_train, prop_train_inner, n_feat, age_train, "linear")
+  }
+
+  return(best_features_linear)
+
+}

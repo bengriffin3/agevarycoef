@@ -298,3 +298,131 @@ perform_cca_using_train <- function(idps, id_train, trait) {
   # trait <- cca_mode_1_train
 }
 
+
+preprocess_traits <- function(trait_code, idps, id_train, trait, n_feat) {
+
+  #Options
+  # 0 = PCA
+  # 999 = perform CCA
+
+  preprocessing_list = list()
+
+  if (trait_code == 0) {
+    trait_pca_list <- perform_pca_using_train(trait, id_train, 1)
+    trait <- trait_pca_list[[1]] # pca_object_trait <- trait_pca_list[[2]]
+    preprocessing_list$trait <- trait
+  } else if (trait_code == 999) {
+    cca_list <- perform_cca_using_train(idps, id_train, trait)
+    trait <- cca_list[[1]]
+    cca_object_idps_trait <- cca_list[[2]]
+    preprocessing_list$trait <- trait
+    preprocessing_list$cca_object_idps_trait <- cca_object_idps_trait
+  } else  {
+    trait = trait
+  }
+
+  return(preprocessing_list)
+}
+
+preprocess_idps <- function(idp_preproc, idps, id_train, trait, n_feat) {
+
+  #Options
+  # 0 = leave it as it is
+  # 1 = perform ICA
+  # 2 = perform weighted-ICA
+  # 3 = perform CCA
+  # 4 = perform PCA
+  # 5 = select best features
+
+
+  preprocessing_list = list()
+
+  if (idp_preproc == 0) {
+    idps <- idps
+    preprocessing_list$idps = idps
+  } else if (idp_preproc %in% c(1, 2)) {
+
+    # this seems to do very little
+    if (idp_preproc == 2) {
+      idps <- upweight_idps_using_train(idps, id_train, trait)
+    }
+
+    idps_ica_list <- perform_ica_using_train(idps, id_train, n_feat)
+    idps <- idps_ica_list[[1]]
+    ica_object_idps <- idps_ica_list[[2]]
+    preprocessing_list$idps = idps
+    preprocessing_list$ica_object_idps = ica_object_idps
+
+  } else if (idp_preproc == 3) {
+    # this is CCA (done elsewhere?)
+    preprocessing_list$idps = idps
+  } else if (idp_preproc == 4) {
+    idps_pca_list <- perform_pca_using_train(idps, id_train)
+    idps <- idps_pca_list[[1]]
+    # pca_object_trait <- trait_pca_list[[2]]
+    preprocessing_list$idps = idps
+  } else if (idp_preproc == 5) {
+    load(paste0(proj_dir, "/data/idx_1436_keep_16_ordered.Rdata"))
+    # select best idp
+    idps_best_16 <- idps[, idx_1436_keep_16_ordered]
+    idps <- idps_best_16[, 1:n_feat]
+    preprocessing_list$idps = idps
+  }
+
+    return(preprocessing_list)
+}
+
+
+
+
+
+
+
+preprocessing_pipeline <- function(data, n_sub, trait_code, prop_train, idp_preproc) {
+
+  # Extract the variables from the mat file and subsample
+  idps <- data$structural.idps[1:n_sub, ]
+  age <- data$age1[1:n_sub]
+  trait <- get_traits(data, trait_code, n_sub)
+  conf <- data$conf1[1:n_sub, ]
+  conf_names <- data$conf.names
+
+
+  # Remove subjects with NaNs (can impute but removing is better)
+  clean_vars <- remove_nan_sub(idps, trait, age, conf)
+  age <- clean_vars$age
+
+  # note training subjects
+  id_train <- get_training_sample_id(clean_vars$trait, prop_train)
+
+  # Select confounds
+  conf <- confound_selection_using_train(clean_vars$conf, conf_names, id_train)
+
+  # scale idps
+  idps <- scale_data_using_train(clean_vars$idps, id_train)
+
+  # perform preprocessing on traits (e.g., PCA/CCA)
+  trait_preproc_list <- preprocess_traits(trait_code, idps, id_train, clean_vars$trait, n_feat)
+  trait <- trait_preproc_list$trait
+
+  # perform preprocessing on IDPs (e.g., ICA/PCA/CCA)
+  idp_preproc_list <- preprocess_idps(idp_preproc, idps, id_train, trait, n_feat)
+  idps <- idp_preproc_list$idps
+
+  # de-mean target
+  trait <- de_mean_trait_using_train(trait, id_train)
+
+  # deconfound data
+  idps <- deconfound_data_using_train(idps, conf, id_train)
+  trait <- deconfound_data_using_train(trait, conf, id_train)
+
+  pre_processed_data <- list()
+  pre_processed_data$idps <- idps
+  pre_processed_data$trait <- trait
+  pre_processed_data$age <- age
+  pre_processed_data$conf <- conf
+  pre_processed_data$id_train <- id_train
+
+  return(pre_processed_data)
+
+}
