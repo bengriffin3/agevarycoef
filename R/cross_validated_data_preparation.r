@@ -7,7 +7,7 @@ library(logger)
 library(glmnet)
 
 
-pre_process_data_cross_validated <- function(proj_dir, idps, trait, trait_id, age, conf, conf_names, prop_train, id_train, ica, n_feat) {
+pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, conf_names, prop_train, id_train, ica, n_feat) {
 
   # Remove subjects with NaNs in idps and age
   idps_with_nans <- idps
@@ -62,7 +62,7 @@ pre_process_data_cross_validated <- function(proj_dir, idps, trait, trait_id, ag
     idps_pca_list <- perform_pca_using_train(idps, id_train)
     idps <- idps_pca_list[[1]]
   } else if (ica == 5) {
-    load(paste0(proj_dir, "/data/idx_1436_keep_16_ordered.Rdata"))
+    load("/gpfs3/well/win-fmrib-analysis/users/psz102/age_varying_coefficients/data/idx_1436_keep_16_ordered.Rdata")
     # select best idps
     idps_best_16 <- idps[, idx_1436_keep_16_ordered]
     idps <- idps_best_16[, 1:n_feat]
@@ -90,7 +90,7 @@ pre_process_data_cross_validated <- function(proj_dir, idps, trait, trait_id, ag
 
 #   return(pre_processed_data)
 
-  return(list(df_all_train, idps, trait, df_all, id_train, age))
+  return(list(df_all_train, idps, trait, df_all, id_train, age, conf))
 }
 
 
