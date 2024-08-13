@@ -180,9 +180,13 @@ run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model
     cvfit_glmnet <- cv.glmnet(cbind(rep(1, length(age_train)), age_train), trait_train)
   }
 
+  print("this is the right function")
   enet_coefficients <- coef(cvfit_glmnet, s = "lambda.min") # note betas
-  idx_non_zero_coeff <- determine_non_zero_coeff(enet_coefficients) # get best features
-  print(paste0("Number of non-zero features: ", length(idx_non_zero_coeff)))
+  print(enet_coefficients)
+  print(enet_coefficients != 0)
+  #idx_non_zero_coeff <- determine_non_zero_coeff(enet_coefficients) # get best features
+  # idx_non_zero_coeff <- which(enet_coefficients != 0)
+  # print(paste0("Number of non-zero features: ", length(idx_non_zero_coeff)))
 
   enet_yhat <- numeric(length(df$y))
   if (model_age == 1 ||  model_age == 3) {
