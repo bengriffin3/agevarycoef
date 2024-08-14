@@ -91,6 +91,9 @@ test_that("pre_process_data_cross_validated correctly preprocess the data", {
     0.43600666, -0.9894784, -0.90391048,
     0.01770737,  0.4254333, -0.14037602,
     -0.09228352,  1.1677400, -0.28021882
+    #-0.61083492, -0.9041024, -0.98079103,
+    #0.37485708, 0.2267684, 0.06101578,
+    #-0.43430719,  0.1938036, 1.46775447
   ), nrow = 3, byrow = TRUE)
 
   # Test if the idps matches the updated expected values
