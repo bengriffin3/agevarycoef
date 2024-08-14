@@ -188,7 +188,7 @@ run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model
   # idx_non_zero_coeff <- which(enet_coefficients != 0)
   # print(paste0("Number of non-zero features: ", length(idx_non_zero_coeff)))
 
-  enet_yhat <- numeric(length(df$y))
+  enet_yhat <- numeric(length(trait))
   if (model_age == 1 ||  model_age == 3) {
     enet_yhat[id_train] <- predict(cvfit_glmnet, newx = cbind(idps_linear_train, age_train), s = "lambda.min")
     enet_yhat[-id_train] <- predict(cvfit_glmnet, newx = cbind(idps_linear[-id_train, ], age[-id_train]), s = "lambda.min")
@@ -200,9 +200,9 @@ run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model
     enet_yhat[-id_train] <- predict(cvfit_glmnet, newx = cbind(rep(1, length(age[-id_train])), age[-id_train]) , s = "lambda.min")
   }
 
-  se_enet <- (enet_yhat - df$y)^2
-  corr_enet_in <- cor(enet_yhat[id_train], trait_train)
-  corr_enet_out <- cor(enet_yhat[-id_train], df[-id_train, ]$y)
+  se_enet <- (enet_yhat - trait)^2
+  corr_enet_in <- cor(enet_yhat[id_train], trait[id_train])
+  corr_enet_out <- cor(enet_yhat[-id_train], trait[-id_train])
 
 
   # elastic_net_model <- list()

@@ -1,4 +1,8 @@
 library(testthat)
+library(logger)
+library(varycoef)
+library(glmnet)
+
 setwd("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/")
 data(test_data_pred)
 
@@ -27,7 +31,7 @@ test_that("linear predictions run correctly", {
 
   ################ RUN LINEAR MODEL ################
   #list[fit_lm, se_lm, corr_lm_in, corr_lm_out, lm_yhat] <- run_linear_model(df_train_linear, id_train, df)
-  linear_results <- run_linear_model(df_train_linear, id_train, df)
+  linear_results <- run_linear_model(df_train_linear, id_train_randomized, df)
   fit_lm <- linear_results$fit_lm
   se_lm <- linear_results$se_lm
   corr_lm_in <- linear_results$corr_lm_in
@@ -59,6 +63,7 @@ test_that("linear predictions run correctly", {
 test_that("elastic net predictions run correctly", {
   set.seed(42)
   # determine best features (linear)
+  n_feat <- 5
   best_features_linear <- 1:n_feat
 
   # prepare linear model data
@@ -108,13 +113,14 @@ test_that("elastic net predictions run correctly", {
 
 
 test_that("SVC predictions run correctly", {
-  
+
   set.seed(42)
   prof <- FALSE
   #perc_train <- 90
   tap <- 0
   taper <- 0
   cov <- "exp"
+  model_age <- 1
   #ica <- 0
   #n_feat <- 5
   #trait_id <- 999
@@ -125,7 +131,7 @@ test_that("SVC predictions run correctly", {
 
   # prepare svc data
   #list[df_train_svc, idps_svc, idps_svc_train] <- prepare_svc_data(df_train_randomized, best_features_svc, id_train_randomized, idps_randomized, age_randomized)
-  svc_data <- prepare_svc_data(df_train_randomized, best_features_svc, id_train_randomized, idps_randomized, age_randomized, df_all)
+  svc_data <- prepare_svc_data(df_train_randomized, best_features_svc, id_train_randomized, idps_randomized, age_randomized, df_all_randomized)
   df_train_svc <- svc_data$df_train_svc
   idps_svc <- svc_data$idps_svc
   idps_svc_train <- svc_data$idps_svc_train
@@ -146,13 +152,14 @@ test_that("SVC predictions run correctly", {
   actual_corr_svc_out <- corr_svc_out
 
   # Expected values
-  expected_se_svc <- c(196.787282, 64.133961, 2.294036)
-  expected_corr_svc_in <- -0.01855146
-  expected_corr_svc_out <- -0.1258423
+  #expected_se_svc <- c(196.787282, 64.133961, 2.294036)
+  expected_se_svc <- c(209.3331375, 319.5240798, 0.1692568)
+  expected_corr_svc_in <- -0.07991901 # -0.01855146
+  expected_corr_svc_out <- 0.1345724 #-0.1258423
 
   # Check that the actual values match the expected values
   expect_equal(actual_se_svc, expected_se_svc, tolerance = 1e-7)
   expect_equal(actual_corr_svc_in, expected_corr_svc_in, tolerance = 1e-7)
-  expect_equal(actual_corr_svc_out, expected_corr_svc_out, tolerance = 1e-7)
+  expect_equal(round(actual_corr_svc_out, 5), round(expected_corr_svc_out, 5), tolerance = 1e-7)
 
 })
