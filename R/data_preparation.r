@@ -154,23 +154,26 @@ prepare_age_data <- function(df_train_linear, df, age_train, model_age, age) {
     df$age <- as.vector(age)
   }
 
-  return(list(df_train_linear, df))
+  return(list(df_train_linear = df_train_linear, df = df))
 }
 
 prepare_linear_data <- function(df_train, idps, best_features_linear) {
   df_train_linear <- df_train[, c(1, best_features_linear + 1)]
   idps_linear <- idps[, best_features_linear]
 
-  return(list(df_train_linear, idps_linear))
+  return(list(df_train_linear = df_train_linear, idps_linear = idps_linear))
 }
 
-prepare_svc_data <- function(df_train, best_features_svc, id_train, idps, age) {
+prepare_svc_data <- function(df_train, best_features_svc, id_train, idps, age, df) {
 
 
   df_train_svc <- df_train[, c(1, best_features_svc + 1)]
   df_train_svc$age <- age[id_train]
   idps_svc <- idps[, best_features_svc]
   idps_svc_train <- idps_svc[id_train, ]
+
+  df_svc <- df[, c(1, best_features_svc + 1)]
+  df_svc$age <- age
 
   # svc_data <- list()
   # svc_data$df_train_svc <- df_train_svc
@@ -179,7 +182,7 @@ prepare_svc_data <- function(df_train, best_features_svc, id_train, idps, age) {
 
   # return(svc_data)
 
-  return(list(df_train_svc, idps_svc, idps_svc_train))
+  return(list(df_train_svc = df_train_svc, idps_svc = idps_svc, idps_svc_train = idps_svc_train, df_svc = df_svc))
 
 }
 

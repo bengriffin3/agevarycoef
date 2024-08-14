@@ -7,7 +7,7 @@ library(logger)
 library(glmnet)
 
 
-pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, conf_names, prop_train, id_train, ica, n_feat) {
+pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, conf_names, prop_train, ica, n_feat) {
 
   # Remove subjects with NaNs in idps and age
   idps_with_nans <- idps
@@ -90,30 +90,83 @@ pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, c
 
 #   return(pre_processed_data)
 
-  return(list(df_all_train, idps, trait, df_all, id_train, age, conf))
+  #return(list(df_all_train, idps, trait, df_all, id_train, age, conf))
+  return(list(df_all_train = df_all_train, idps = idps, trait = trait, df_all = df_all, id_train = id_train, age = age, conf = conf))
 }
 
 
+# scale_data_using_train <- function(idps, id_train) {
+
+#   # note train and test idps
+#   idps_train <- idps[id_train, ]
+#   idps_test <- idps[-id_train, ]
+
+#   # Scale the training IDPs
+#   idps_train_scaled <- scale(idps_train)
+
+#   # Save the scaling parameters
+#   train_mean <- attr(idps_train_scaled, "scaled:center")
+#   train_sd <- attr(idps_train_scaled, "scaled:scale")
+
+#   # Scale the test IDPs using the training scaling parameters
+#   idps_test_scaled <- sweep(idps_test, 2, train_mean, "-")
+#   idps_test_scaled <- sweep(idps_test_scaled, 2, train_sd, "/")
+
+#   # remake idps variable
+#   idps[id_train, ] <- idps_train_scaled
+#   idps[-id_train, ] <- idps_test_scaled
+
+#   return(idps)
+# }
+
 scale_data_using_train <- function(idps, id_train) {
 
-  # note train and test idps
-  idps_train <- idps[id_train, ]
-  idps_test <- idps[-id_train, ]
+  if (is.vector(idps)) {
+    # Handle the case where idps is a 1D vector
 
-  # Scale the training IDPs
-  idps_train_scaled <- scale(idps_train)
+    # Note train and test idps
+    idps_train <- idps[id_train]
+    idps_test <- idps[-id_train]
 
-  # Save the scaling parameters
-  train_mean <- attr(idps_train_scaled, "scaled:center")
-  train_sd <- attr(idps_train_scaled, "scaled:scale")
+    # Scale the training IDPs
+    idps_train_scaled <- scale(idps_train)
 
-  # Scale the test IDPs using the training scaling parameters
-  idps_test_scaled <- sweep(idps_test, 2, train_mean, "-")
-  idps_test_scaled <- sweep(idps_test_scaled, 2, train_sd, "/")
+    # Save the scaling parameters
+    train_mean <- attr(idps_train_scaled, "scaled:center")
+    train_sd <- attr(idps_train_scaled, "scaled:scale")
 
-  # remake idps variable
-  idps[id_train, ] <- idps_train_scaled
-  idps[-id_train, ] <- idps_test_scaled
+    # Scale the test IDPs using the training scaling parameters
+    idps_test_scaled <- (idps_test - train_mean) / train_sd
+
+    # Remake idps variable
+    idps[id_train] <- idps_train_scaled
+    idps[-id_train] <- idps_test_scaled
+
+  } else if (is.matrix(idps)) {
+    # Handle the case where idps is a 2D matrix
+
+    # Note train and test idps
+    idps_train <- idps[id_train, ]
+    idps_test <- idps[-id_train, ]
+
+    # Scale the training IDPs
+    idps_train_scaled <- scale(idps_train)
+
+    # Save the scaling parameters
+    train_mean <- attr(idps_train_scaled, "scaled:center")
+    train_sd <- attr(idps_train_scaled, "scaled:scale")
+
+    # Scale the test IDPs using the training scaling parameters
+    idps_test_scaled <- sweep(idps_test, 2, train_mean, "-")
+    idps_test_scaled <- sweep(idps_test_scaled, 2, train_sd, "/")
+
+    # Remake idps variable
+    idps[id_train, ] <- idps_train_scaled
+    idps[-id_train, ] <- idps_test_scaled
+
+  } else {
+    stop("Input idps must be either a vector or a matrix.")
+  }
 
   return(idps)
 }
@@ -435,7 +488,23 @@ remove_essential_confounds <- function(conf, conf_names) {
                      "HeadMotion_mean_rfMRI_rel_Site_3")
 
   # get values of essential confounds
-  ess_confounds_idx <- sapply(ess_confounds, function(name) which(unlist(conf_names) == name))
+  #ess_confounds_idx <- sapply(ess_confounds, function(name) which(unlist(conf_names) == name))
+  
+
+  # Get indices of essential confounds that exist in conf_names
+  ess_confounds_idx <- sapply(ess_confounds, function(name) {
+    idx <- which(unlist(conf_names) == name)
+    if(length(idx) == 0) {
+      return(NA)  # Return NA if the confound is not found
+    } else {
+      return(idx)
+    }
+  })
+
+  # Remove NA values (i.e., confounds not found in conf_names)
+  ess_confounds_idx <- ess_confounds_idx[!is.na(ess_confounds_idx)]
+
+  # get values of essential confounds
   conf_ess <- conf[, ess_confounds_idx]
 
   # Remove essential confounds from the list

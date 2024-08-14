@@ -7,7 +7,7 @@ library(logger)
 library(glmnet)
 
 
-get_best_feat_svc <- function(dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n, ica) {
+get_best_feat_svc <- function(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n, ica) {
   dir <- '/gpfs3/well/win-fmrib-analysis/users/psz102/age_varying_coefficients/results/univariate'
   perc_train <- 90 #75 # might want to update this to 90
   n_idps <- 1436 # 10
@@ -162,7 +162,7 @@ run_linear_model <- function(df_train_linear, id_train, df) {
 
   # return(linear_model)
 
-  return(list(fit_lm, se_lm, corr_lm_in, corr_lm_out, lm_yhat))
+  return(list(fit_lm = fit_lm, se_lm = se_lm, corr_lm_in = corr_lm_in, corr_lm_out = corr_lm_out, lm_yhat = lm_yhat))
 }
 
 run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model_age) {
@@ -216,11 +216,11 @@ run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model
 
   # return(elastic_net_model)
 
-  return(list(enet_coefficients, cvfit_glmnet, enet_yhat, se_enet, corr_enet_in, corr_enet_out))
+  return(list(enet_coefficients=enet_coefficients, cvfit_glmnet=cvfit_glmnet, enet_yhat=enet_yhat, se_enet=se_enet, corr_enet_in=corr_enet_in, corr_enet_out=corr_enet_out))
 
 }
 
-fit_svc_model <- function (best_features_svc, df_all_train, df_all, df_train_svc, cov, prof, taper, id_train, age, age_train, model_age, prop_train_inner=0.9) {
+fit_svc_model <- function (best_features_svc, df_all_train, df_all, df_train_svc, cov, prof, taper, id_train, age, age_train, model_age, df_svc, prop_train_inner=0.9) {
 
   # configure SVC
   svc_config <- SVC_mle_control(cov.name = c(cov),
@@ -254,31 +254,32 @@ fit_svc_model <- function (best_features_svc, df_all_train, df_all, df_train_svc
     extracted_columns <- df_all_train[, column_names]
     df_train_svc <- cbind(df_train_svc, extracted_columns)
     extracted_columns_df <- df_all[, column_names]
-    df <- cbind(df_all, extracted_columns_df)
+    #df <- cbind(df_all, extracted_columns_df)
+    df_svc <- cbind(df_all, extracted_columns_df)
     fit_svc <- SVC_mle(formula = fmla_fix, data = df_train_svc, locs = age_train, control = svc_config, RE_formula = fmla_vary)
   }
 
   # run predictions (for train and test at same time)
-  df_svc_pred <- predict(fit_svc, newdata = df, newlocs = age, control = svc_config)
+  df_svc_pred <- predict(fit_svc, newdata = df_svc, newlocs = age, control = svc_config)
 
   # calculate squared errors
-  se_svc <- (df_svc_pred$y.pred - df$y)^2
-  corr_svc_in <- cor(df_svc_pred$y.pred[id_train], df$y[id_train])
-  corr_svc_out <- cor(df_svc_pred$y.pred[-id_train], df$y[-id_train])
+  se_svc <- (df_svc_pred$y.pred - df_svc$y)^2
+  corr_svc_in <- cor(df_svc_pred$y.pred[id_train], df_svc$y[id_train])
+  corr_svc_out <- cor(df_svc_pred$y.pred[-id_train], df_svc$y[-id_train])
 
 
-  return(list(df_svc_pred, se_svc, corr_svc_in, corr_svc_out))
+  return(list(df_svc_pred = df_svc_pred, se_svc = se_svc, corr_svc_in = corr_svc_in, corr_svc_out = corr_svc_out))
 
 }
 
-determine_best_svc_features <- function(dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica) {
+determine_best_svc_features <- function(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica) {
 
   # determine best features (svc)
   print("Getting best svc features")
   if (ica == 3 || ica == 5) {
     best_features_svc <- 1:n_feat
   } else {
-    best_features_svc <- get_best_feat_svc(dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n_feat, ica)
+    best_features_svc <- get_best_feat_svc(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n_feat, ica)
   }
 
   return(best_features_svc)
