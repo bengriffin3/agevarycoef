@@ -3,7 +3,7 @@ library(logger)
 library(varycoef)
 library(glmnet)
 
-setwd("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/")
+#setwd("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/")
 data(test_data_pred)
 
 n_feat <- 5
