@@ -247,3 +247,53 @@ get_x_pcs <- function(x, n_pc_comp) {
 #   }
 #   return(trait)
 # }
+
+
+add_idp_age_interaction_term <- function(df_all, age) {
+
+  # Create new features by multiplying 'age' with each feature (excluding 'y')
+  # List all feature columns except 'y'
+  feature_columns <- names(df_all)[!names(df_all) %in% c("y", "age", "age_squared")]
+
+  # Multiply 'age' with each feature column and add to the dataframe
+  for (feature in feature_columns) {
+    new_feature_name <- paste("age_", feature, sep = "")
+    df_all[[new_feature_name]] <- df_all$age * df_all[[feature]]
+  }
+
+
+  return(df_all)
+}
+
+perform_pca_after_feature_engineering <- function(df_all) {
+
+  features_for_pca <- names(df_all)[!names(df_all) %in% c("y", "age", "age_squared")]
+
+  pca_result_x <- prcomp(df_all[, features_for_pca], center = TRUE, scale. = TRUE)  # Scaling is recommended
+  pca_components <- as.data.frame(pca_result_x$x[, 1:600])
+  df_all <- df_all[, !(names(df_all) %in% features_for_pca)]
+  df_all <- cbind(df_all, pca_components)
+
+  return(df_all)
+}
+
+
+
+prepare_boost_data <- function(df_all, id_train) {
+
+  # things I've previously tried
+  #idps <- perform_pca_using_train(idps, id_train, n_PCs = 1000)
+  #df_all <- data.frame(y = trait, x = idps[[1]]) # perform PCA before feature engineering
+  #df_all <- data.frame(y = trait, x = age, x1 = age^2)
+  #df_all$age_squared <- age^2 # add age^2 as a feature
+  #df_all <- add_idp_age_interaction_term(df_all, age) # add interaction terms  
+  #df_all <- perform_pca_after_feature_engineering(df_all) # perform PCA after feature engineering
+
+  df_all_train_x <- as.matrix(df_all[id_train, ][, !names(df_all[id_train, ]) %in% c("y")])
+  df_all_train_y <- as.matrix(df_all[id_train, ]$y)
+
+  df_all_test_x <- as.matrix(df_all[-id_train, ][, !names(df_all[-id_train, ]) %in% c("y")])
+  df_all_test_y <- as.matrix(df_all[-id_train, ]$y)
+
+  return(list(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y))
+}

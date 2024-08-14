@@ -5,6 +5,7 @@ library(fastICA)
 library(CCA)
 library(logger)
 library(glmnet)
+library(lightgbm)
 
 
 get_best_feat_svc <- function(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n, ica) {
@@ -306,4 +307,59 @@ extract_best_features <- function(corr, n) {
   best_n_features <- sort(best_features_idx[1:n])
 
   return(best_n_features)
+}
+
+
+run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y) {
+
+
+  train_lgb <- lgb.Dataset(data = df_all_train_x, label = df_all_train_y)
+
+  params <- list(
+    objective = "regression",
+    metric = "l2",
+    learning_rate = 0.01,
+    num_leaves = 15,
+    min_data_in_leaf = 20,
+    lambda_l1 = 0.1,           # L1 regularization
+    lambda_l2 = 0.1,            # L2 regularization
+    bagging_fraction = 0.8,
+    bagging_freq = 1
+)
+  print("Running LGBoost")
+  # Train the model
+  lgb_model <- lgb.train(
+                         params = params,
+                         data = train_lgb,
+                         nrounds = 1000,
+                         early_stopping_rounds = 10,
+                         valids = list(test = lgb.Dataset(df_all_test_x, label = df_all_test_y)),
+                         verbose = 0)
+
+
+  # Predict using the trained model
+  predictions_test <- predict(lgb_model, df_all_test_x)
+  predictions_train <- predict(lgb_model, df_all_train_x)
+
+
+
+ return(list(predictions_train, predictions_test))
+ }
+
+get_lgboost_stats <- function(predictions_train, predictions_test, df_all_train_y, df_all_test_y) {
+
+  # Calculate Mean Squared Error
+  mse_test <- mean((predictions_test - df_all_test_y) ^ 2)
+  mse_train <- mean((predictions_train - df_all_train_y) ^ 2)
+
+
+  # Calculate R-squared
+  r_squared_test <- 1 - (sum((df_all_test_y - predictions_test) ^ 2) / sum((df_all_test_y - mean(df_all_test_y)) ^ 2))
+  r_squared_train <- 1 - (sum((df_all_train_y - predictions_train) ^ 2) / sum((df_all_train_y - mean(df_all_train_y)) ^ 2))
+
+  # Calculate correlation
+  corr_acc_test <- cor(predictions_test, df_all_test_y)
+  corr_acc_train <- cor(predictions_train, df_all_train_y)
+
+return(list(mse_test, mse_train, r_squared_test, r_squared_train, corr_acc_test, corr_acc_train))
 }
