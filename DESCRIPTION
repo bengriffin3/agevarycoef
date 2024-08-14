@@ -17,6 +17,7 @@ Imports:
     fastICA,
     knitr,
     logger,
+    optparse,
     R.matlab,
     stats,
     stringr,
