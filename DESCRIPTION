@@ -17,6 +17,7 @@ Imports:
     fastICA,
     glmnet,
     knitr,
+    lightgbm,
     logger,
     optparse,
     R.matlab,
