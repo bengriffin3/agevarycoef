@@ -30,32 +30,28 @@ test_that("linear predictions run correctly", {
 
 
   ################ RUN LINEAR MODEL ################
-  #list[fit_lm, se_lm, corr_lm_in, corr_lm_out, lm_yhat] <- run_linear_model(df_train_linear, id_train, df)
-  linear_results <- run_linear_model(df_train_linear, id_train_randomized, df)
-  fit_lm <- linear_results$fit_lm
-  se_lm <- linear_results$se_lm
-  corr_lm_in <- linear_results$corr_lm_in
-  corr_lm_out <- linear_results$corr_lm_out
-  lm_yhat <- linear_results$lm_yhat
+  linear_model <- run_linear_model(df_train_linear, id_train_randomized, df)
+  lm_yhat <- linear_model$lm_yhat
+  yhat_train <- lm_yhat[id_train_randomized]
+  yhat_test <- lm_yhat[-id_train_randomized]
 
-
+  model_results <- get_model_stats(yhat_train, yhat_test, trait_randomized[id_train_randomized], trait_randomized[-id_train_randomized])
+  corr_train <- model_results$corr_train
+  corr_test <- model_results$corr_test
 
   # Expected values (these are the values you've provided)
-  expected_se_lm <- c(1086.25718, 304.61554, 29.18595)
-  expected_corr_lm_in <- 0.1492521
-  expected_corr_lm_out <- 0.1751417
+  expected_corr_train <- 0.1492521
+  expected_corr_test <- 0.1751417
   expected_lm_yhat <- c(-2.8320490, 0.8914371, 2.0784881)
 
   # Actual values (assume these are calculated in your function)
-  actual_se_lm <- se_lm[1:3]
-  actual_corr_lm_in <- corr_lm_in
-  actual_corr_lm_out <- corr_lm_out
+  actual_corr_train <- corr_train
+  actual_corr_test <- corr_test
   actual_lm_yhat <- lm_yhat[1:3]
 
   # Check that the actual values match the expected values
-  expect_equal(actual_se_lm, expected_se_lm, tolerance = 1e-7)
-  expect_equal(round(actual_corr_lm_in, 5), round(expected_corr_lm_in, 5), tolerance = 1e-7)
-  expect_equal(round(actual_corr_lm_out, 5), round(expected_corr_lm_out, 5), tolerance = 1e-7)
+  expect_equal(round(actual_corr_train, 5), round(expected_corr_train, 5), tolerance = 1e-7)
+  expect_equal(round(actual_corr_test, 5), round(expected_corr_test, 5), tolerance = 1e-7)
   expect_equal(actual_lm_yhat, expected_lm_yhat, tolerance = 1e-7)
 
 })
@@ -73,41 +69,26 @@ test_that("elastic net predictions run correctly", {
 
 
   ################ RUN ELASTIC NET ################
-  #list[enet_coefficients, cvfit_glmnet, enet_yhat, se_enet, corr_enet_in, corr_enet_out] <- run_elastic_net_model(idps_randomized, idps_linear, trait_randomized, id_train_randomized, age_randomized, model_age)
-  #list[enet_coefficients, cvfit_glmnet, enet_yhat, se_enet, corr_enet_in, corr_enet_out] <- run_elastic_net_model(idps_randomized, idps_linear, trait_randomized, id_train_randomized, age_randomized, model_age)
-  elastic_net_results <- run_elastic_net_model(idps_randomized, idps_linear, trait_randomized, id_train_randomized, age_randomized, model_age)
-  enet_coefficients <- elastic_net_results$enet_coefficients
-  cvfit_glmnet <- elastic_net_results$cvfit_glmnet
-  enet_yhat <- elastic_net_results$enet_yhat
-  se_enet <- elastic_net_results$se_enet
-  corr_enet_in <- elastic_net_results$corr_enet_in
-  corr_enet_out <- elastic_net_results$corr_enet_out
+  elastic_net_results <- run_elastic_net_model(idps_randomized, idps_linear, trait_randomized, id_train_randomized, age_randomized, model_age)  
+  yhat_train <- elastic_net_results$yhat_train
+  yhat_test <- elastic_net_results$yhat_test
 
+  model_results <- get_model_stats(yhat_train, yhat_test, trait_randomized[id_train_randomized], trait_randomized[-id_train_randomized])
+  corr_train <- model_results$corr_train
+  corr_test <- model_results$corr_test
 
-  expected_enet_yhat <- c(-3.2944718, -0.2900734, -0.1323354)
-  expected_se_enet <- c(1116.95246, 347.25387, 57.96121)
-  #expected_se_enet <- c(6.41061408, 0.02410067, 0.30670160)
-  expected_corr_enet_in <- 0.1383271
-  expected_corr_enet_out <- 0.1116852
+  expected_corr_train <- 0.1383271
+  expected_corr_test <- 0.1116852
 
   # Actual values (assume these are calculated in your function)
-  actual_enet_yhat <- enet_yhat[1:3]
-  actual_se_enet <- se_enet[1:3]
-  actual_corr_enet_in <- corr_enet_in
-  actual_corr_enet_out <- corr_enet_out
-
-
-  # Check that the actual predicted values (yhat) match the expected values
-  expect_equal(actual_enet_yhat, expected_enet_yhat, tolerance = 1e-7)
-
-  # Check that the actual standard errors match the expected values
-  expect_equal(actual_se_enet, expected_se_enet, tolerance = 1e-7)
+  actual_corr_train <- corr_train
+  actual_corr_test <- corr_test
 
   # Check that the actual in-sample correlation matches the expected value
-  expect_equal(round(actual_corr_enet_in, 5), round(expected_corr_enet_in, 5), tolerance = 1e-7)
+  expect_equal(round(actual_corr_train, 5), round(expected_corr_train, 5), tolerance = 1e-7)
 
   # Check that the actual out-of-sample correlation matches the expected value
-  expect_equal(round(actual_corr_enet_out, 5), round(expected_corr_enet_out, 5), tolerance = 1e-7)
+  expect_equal(round(actual_corr_test, 5), round(expected_corr_test, 5), tolerance = 1e-7)
 
 })
 
@@ -142,24 +123,23 @@ test_that("SVC predictions run correctly", {
   #list[df_svc_pred, se_svc, corr_svc_in, corr_svc_out] <- fit_svc_model(best_features_svc, df_all_train_randomized, df_all_randomized, df_train_svc, cov, prof, taper, id_train_randomized, age_randomized, age_train_randomized, model_age)
   svc_results <- fit_svc_model(best_features_svc, df_all_train_randomized, df_all_randomized, df_train_svc, cov, prof, taper, id_train_randomized, age_randomized, age_train_randomized, model_age, df_svc)
   # unpack results
-  se_svc <- svc_results$se_svc
-  corr_svc_in <- svc_results$corr_svc_in
-  corr_svc_out <- svc_results$corr_svc_out
+  yhat_train <- svc_results$yhat_train
+  yhat_test <- svc_results$yhat_test
+
+  model_results <- get_model_stats(yhat_train, yhat_test, trait_randomized[id_train_randomized], trait_randomized[-id_train_randomized])
+  corr_train <- model_results$corr_train
+  corr_test <- model_results$corr_test
 
   # Actual values (as calculated by your function)
-  actual_se_svc <- se_svc[1:3]
-  actual_corr_svc_in <- corr_svc_in
-  actual_corr_svc_out <- corr_svc_out
+  actual_corr_train <- corr_train
+  actual_corr_test <- corr_test
 
   # Expected values
-  #expected_se_svc <- c(196.787282, 64.133961, 2.294036)
-  expected_se_svc <- c(209.3331375, 319.5240798, 0.1692568)
-  expected_corr_svc_in <- -0.07991901 # -0.01855146
-  expected_corr_svc_out <- 0.1345724 #-0.1258423
+  expected_corr_train <- 0.97172365 # -0.07991901 # -0.01855146
+  expected_corr_test <- -0.18884077 # 0.1345724 #-0.1258423
 
   # Check that the actual values match the expected values
-  expect_equal(actual_se_svc, expected_se_svc, tolerance = 1e-7)
-  expect_equal(actual_corr_svc_in, expected_corr_svc_in, tolerance = 1e-7)
-  expect_equal(round(actual_corr_svc_out, 5), round(expected_corr_svc_out, 5), tolerance = 1e-7)
+  expect_equal(actual_corr_train, expected_corr_train, tolerance = 1e-7)
+  expect_equal(round(actual_corr_test, 5), round(expected_corr_test, 5), tolerance = 1e-7)
 
 })

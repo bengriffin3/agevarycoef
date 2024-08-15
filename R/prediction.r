@@ -6,6 +6,8 @@ library(CCA)
 library(logger)
 library(glmnet)
 library(lightgbm)
+library(xgboost)
+library(data.table)
 
 
 get_best_feat_svc <- function(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n, ica) {
@@ -15,6 +17,7 @@ get_best_feat_svc <- function(trait_id, n_feat, n_sub, perc_train, prof, tap, co
   n_sub <- 20000 # 10000
   n_feat <- 1436 # 10
   model_intercept <- 0
+  ica <- 0
   corr <- rep(NA, n_idps)
 
 
@@ -163,7 +166,7 @@ run_linear_model <- function(df_train_linear, id_train, df) {
 
   # return(linear_model)
 
-  return(list(fit_lm = fit_lm, se_lm = se_lm, corr_lm_in = corr_lm_in, corr_lm_out = corr_lm_out, lm_yhat = lm_yhat))
+  return(list(fit_lm = fit_lm, lm_yhat = lm_yhat))
 }
 
 run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model_age) {
@@ -181,10 +184,10 @@ run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model
     cvfit_glmnet <- cv.glmnet(cbind(rep(1, length(age_train)), age_train), trait_train)
   }
 
-  print("this is the right function")
-  enet_coefficients <- coef(cvfit_glmnet, s = "lambda.min") # note betas
-  print(enet_coefficients)
-  print(enet_coefficients != 0)
+  # print("this is the right function")
+  # enet_coefficients <- coef(cvfit_glmnet, s = "lambda.min") # note betas
+  # print(enet_coefficients)
+  # print(enet_coefficients != 0)
   #idx_non_zero_coeff <- determine_non_zero_coeff(enet_coefficients) # get best features
   # idx_non_zero_coeff <- which(enet_coefficients != 0)
   # print(paste0("Number of non-zero features: ", length(idx_non_zero_coeff)))
@@ -201,23 +204,10 @@ run_elastic_net_model <- function(idps, idps_linear, trait, id_train, age, model
     enet_yhat[-id_train] <- predict(cvfit_glmnet, newx = cbind(rep(1, length(age[-id_train])), age[-id_train]) , s = "lambda.min")
   }
 
-  se_enet <- (enet_yhat - trait)^2
-  corr_enet_in <- cor(enet_yhat[id_train], trait[id_train])
-  corr_enet_out <- cor(enet_yhat[-id_train], trait[-id_train])
+  yhat_train <- enet_yhat[id_train]
+  yhat_test <- enet_yhat[-id_train]
 
-
-  # elastic_net_model <- list()
-  # elastic_net_model$enet_coefficients <- enet_coefficients
-  # elastic_net_model$cvfit_glmnet <- cvfit_glmnet
-  # elastic_net_model$enet_yhat <- enet_yhat
-  # elastic_net_model$se_enet <- se_enet
-  # elastic_net_model$corr_enet_in <- corr_enet_in
-  # elastic_net_model$corr_enet_out <- corr_enet_out
-
-
-  # return(elastic_net_model)
-
-  return(list(enet_coefficients=enet_coefficients, cvfit_glmnet=cvfit_glmnet, enet_yhat=enet_yhat, se_enet=se_enet, corr_enet_in=corr_enet_in, corr_enet_out=corr_enet_out))
+  return(list(cvfit_glmnet = cvfit_glmnet, yhat_train = yhat_train, yhat_test = yhat_test))
 
 }
 
@@ -262,14 +252,10 @@ fit_svc_model <- function (best_features_svc, df_all_train, df_all, df_train_svc
 
   # run predictions (for train and test at same time)
   df_svc_pred <- predict(fit_svc, newdata = df_svc, newlocs = age, control = svc_config)
+  yhat_train <- df_svc_pred$y.pred[id_train]
+  yhat_test <- df_svc_pred$y.pred[-id_train]
 
-  # calculate squared errors
-  se_svc <- (df_svc_pred$y.pred - df_svc$y)^2
-  corr_svc_in <- cor(df_svc_pred$y.pred[id_train], df_svc$y[id_train])
-  corr_svc_out <- cor(df_svc_pred$y.pred[-id_train], df_svc$y[-id_train])
-
-
-  return(list(df_svc_pred = df_svc_pred, se_svc = se_svc, corr_svc_in = corr_svc_in, corr_svc_out = corr_svc_out))
+  return(list(fit_svc = fit_svc, df_svc_pred = df_svc_pred, yhat_train = yhat_train, yhat_test = yhat_test))
 
 }
 
@@ -325,7 +311,7 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
     lambda_l2 = 0.1,            # L2 regularization
     bagging_fraction = 0.8,
     bagging_freq = 1
-)
+  )
   print("Running LGBoost")
   # Train the model
   lgb_model <- lgb.train(
@@ -333,8 +319,8 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
                          data = train_lgb,
                          nrounds = 1000,
                          early_stopping_rounds = 10,
-                         valids = list(test = lgb.Dataset(df_all_test_x, label = df_all_test_y)),
-                         verbose = 0)
+                         valids = list(train = lgb.Dataset(df_all_train_x, label = df_all_train_y),test = lgb.Dataset(df_all_test_x, label = df_all_test_y)),
+                         verbose = 1)
 
 
   # Predict using the trained model
@@ -343,10 +329,10 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
 
 
 
- return(list(predictions_train, predictions_test))
+ return(list(predictions_train, predictions_test, lgb_model))
  }
 
-get_lgboost_stats <- function(predictions_train, predictions_test, df_all_train_y, df_all_test_y) {
+get_model_stats <- function(predictions_train, predictions_test, df_all_train_y, df_all_test_y) {
 
   # Calculate Mean Squared Error
   mse_test <- mean((predictions_test - df_all_test_y) ^ 2)
@@ -358,8 +344,65 @@ get_lgboost_stats <- function(predictions_train, predictions_test, df_all_train_
   r_squared_train <- 1 - (sum((df_all_train_y - predictions_train) ^ 2) / sum((df_all_train_y - mean(df_all_train_y)) ^ 2))
 
   # Calculate correlation
-  corr_acc_test <- cor(predictions_test, df_all_test_y)
-  corr_acc_train <- cor(predictions_train, df_all_train_y)
+  corr_test <- cor(predictions_test, df_all_test_y)
+  corr_train <- cor(predictions_train, df_all_train_y)
 
-return(list(mse_test, mse_train, r_squared_test, r_squared_train, corr_acc_test, corr_acc_train))
+
+  #se_test <- (predictions_test - df_all_test_y)^2
+  #se_train <- (predictions_train - df_all_train_y)^2
+
+  print(paste("Mean Squared Error (TRAIN):", mse_train))
+  print(paste("Mean Squared Error (TEST):", mse_test))
+  print(paste("R-squared (TRAIN):", r_squared_train))
+  print(paste("R-squared (TEST):", r_squared_test))
+  print(paste("Correlation (TRAIN):", corr_train))
+  print(paste("Correlation (TEST):", corr_test))
+
+return(list(mse_test = mse_test, mse_train = mse_train, r_squared_test = r_squared_test, r_squared_train = r_squared_train, corr_test = corr_test, corr_train = corr_train))}
+
+
+
+run_xgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y) {
+
+
+  dtrain <- xgb.DMatrix(data = df_all_train_x, label = df_all_train_y)
+  dtest <- xgb.DMatrix(data = df_all_test_x, label = df_all_test_y)
+
+  # Set XGBoost parameters
+  params <- list(
+    objective = "reg:squarederror",  # Regression objective
+    eval_metric = "rmse",            # Evaluation metric
+    #booster = "gblinear",
+    max_depth = 4,                   # Maximum depth of a tree
+    eta = 0.1,                       # Learning rate
+    subsample = 0.8,                 # Subsample ratio of the training instances
+    colsample_bytree = 0.8           # Subsample ratio of columns when constructing each tree
+  )
+
+  xgb_model <- xgb.train(
+    params = params,
+    data = dtrain,
+    nrounds = 40,                    # Number of boosting rounds # 100
+    #watchlist = list(train = dtrain), # Watchlist to see performance on training data
+    watchlist = list(train = dtrain, test = dtest),
+    verbose = 1                       # Print out training progress
+  )
+
+  predictions_test <- predict(xgb_model, newdata = df_all_test_x)
+  predictions_train <- predict(xgb_model, newdata = df_all_train_x)
+
+  return(list(predictions_train, predictions_test, xgb_model))
+}
+
+
+
+get_importance_matrix <- function(model, run_svc) {
+
+  if (run_svc == 2) {
+    importance_matrix <- lgb.importance(model = model, percentage = TRUE)
+  } else if (run_svc == 3) {
+    importance_matrix <- xgb.importance(model = model)
+  }
+
+  return(importance_matrix)
 }

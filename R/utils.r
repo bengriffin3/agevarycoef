@@ -20,7 +20,7 @@ save_training_data <- function (proj_dir, trait_id, n_feat, n_sub, perc_train, i
 }
 
 check_for_existing_model <- function(proj_dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica, run_svc, model_age) {
-  
+
   dir <- paste0(proj_dir, "/results/results_GP")
   file1 <- sprintf("%s/rel_t_%i_f_%i_n_%i_p_%i_l_%i_ta_%i_c_%s_ica_%i_svc_%i_mi_%i.RData",
                       dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica, run_svc, model_age)

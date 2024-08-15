@@ -28,12 +28,13 @@ pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, c
 
   # scale idps
   idps <- scale_data_using_train(idps, id_train)
-
+  cca_object_idps_trait <- 0
+  ica_object_idps <- 0
   # perform CCA or PC
   if (trait_id == 999) {
     cca_list <- perform_cca_using_train(idps, id_train, trait)
     trait <- cca_list[[1]]
-    #cca_object_idps_trait <- cca_list[[2]]
+    cca_object_idps_trait <- cca_list[[2]]
     #pca_object_idps_for_cca <- cca_list[[3]]
     #pca_object_trait <- cca_list[[4]] # we have already performed PCA so ignore this
   } else if (trait_id == 0) {
@@ -57,7 +58,7 @@ pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, c
     idps_ica_list <- perform_ica_using_train(idps, id_train, n_feat)
     idps_ica <- idps_ica_list[[1]]
     idps <- idps_ica
-    #ica_object_idps <- idps_ica_list[[2]]
+    ica_object_idps <- idps_ica_list[[2]]
   } else if (ica == 4) {
     idps_pca_list <- perform_pca_using_train(idps, id_train)
     idps <- idps_pca_list[[1]]
@@ -91,7 +92,7 @@ pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, c
 #   return(pre_processed_data)
 
   #return(list(df_all_train, idps, trait, df_all, id_train, age, conf))
-  return(list(df_all_train = df_all_train, idps = idps, trait = trait, df_all = df_all, id_train = id_train, age = age, conf = conf))
+  return(list(df_all_train = df_all_train, idps = idps, trait = trait, df_all = df_all, id_train = id_train, age = age, conf = conf, cca_object_idps_trait = cca_object_idps_trait, ica_object_idps = ica_object_idps))
 }
 
 
@@ -489,7 +490,7 @@ remove_essential_confounds <- function(conf, conf_names) {
 
   # get values of essential confounds
   #ess_confounds_idx <- sapply(ess_confounds, function(name) which(unlist(conf_names) == name))
-  
+
 
   # Get indices of essential confounds that exist in conf_names
   ess_confounds_idx <- sapply(ess_confounds, function(name) {
