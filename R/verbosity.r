@@ -7,7 +7,7 @@ library(logger)
 library(glmnet)
 library(knitr)
 
-print_info <- function(trait, n_feat, n_sub, perc_tn, prof, tap, cov, run_svc) {
+print_info <- function(trait, n_sub, perc_tn, prof, tap, cov, run_svc, n_feat=1) {
   print(paste0("Trait: ", trait))
   print(paste0("Number of features: ", n_feat))
   print(paste0("Number of subjects: ", n_sub))

@@ -5,29 +5,42 @@ library(fastICA)
 library(CCA)
 library(logger)
 library(glmnet)
+library(gsubfn)
 
 
-pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, conf_names, prop_train, ica, n_feat) {
+pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, conf_names, prop_train, ica, n_feat=0, remove_age=0) {
 
   # Remove subjects with NaNs in idps and age
-  idps_with_nans <- idps
-  list_of_vars <- remove_nan_sub(idps, trait, age, conf)
-  idps <- list_of_vars$idps
-  trait <- list_of_vars$trait
-  age <- list_of_vars$age
-  conf <- list_of_vars$conf
+  # idps_with_nans <- idps
+  clean_data <- remove_nan_sub(idps, trait, age, conf)
+  idps <- clean_data$idps
+  trait <- clean_data$trait
+  age <- clean_data$age
+  conf <- clean_data$conf
+
+  ####################### NEED TO BE CAREFUL WITH DECISION MAKING HERE
+  ####################### MIGHT BE WORTH IMPUTING BASED ON TRAINING DATA ONLY
+
+  # impute data for IDPS if subjects are missing 1000 or more IDP values
+  imputed_data <- impute_and_filter_data(idps, trait, age, conf, max_nans = 1000)
+  idps <- imputed_data$idps
+  trait <- imputed_data$trait
+  age <- imputed_data$age
+  conf <- imputed_data$conf
+
+  # impute trait if subjects are missing 2 or more trait values
+  imputed_data <- impute_and_filter_data(trait, idps, age, conf, max_nans = 2)
+  idps <- imputed_data$trait
+  trait <- imputed_data$idps
+  age <- imputed_data$age
+  conf <- imputed_data$conf
 
   # note training subjects
   id_train <- get_training_sample_id(trait, prop_train)
 
-  # Select confounds
-  conf <- confound_selection_using_train(conf, conf_names, id_train)
-
-  # impute idps (remove NaNs instead as this is better)
-  # idps <- impute_data_using_train(idps, id_train)
-
-  # scale idps
+  # scale idps (and age)
   idps <- scale_data_using_train(idps, id_train)
+  age <- scale_data_using_train(age, id_train)
   cca_object_idps_trait <- 0
   ica_object_idps <- 0
   # perform CCA or PC
@@ -45,9 +58,6 @@ pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, c
     trait <- trait_pca
   }
 
-  # perform ICA on idps
-  df_all <- data.frame(y = trait, x = idps)
-  df_all_train <- df_all[id_train, ]
   if (ica == 1) {
     # choose whether to upweight idps (this seems to do very very little)
     upweight <- 0
@@ -67,31 +77,27 @@ pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, c
     # select best idps
     idps_best_16 <- idps[, idx_1436_keep_16_ordered]
     idps <- idps_best_16[, 1:n_feat]
-
   }
 
   # de-mean target
   trait <- de_mean_trait_using_train(trait, id_train)
 
-  # deconfound data
-  idps <- deconfound_data_using_train(idps, conf, id_train)
-  trait <- deconfound_data_using_train(trait, conf, id_train)
+  # # deconfound IDPS
+  conf_without_age <- confound_selection_using_train(conf, conf_names, id_train, 0)
+  # idps <- deconfound_data_using_train(idps, conf, id_train)
+  if (remove_age == 0) {
+    trait <- deconfound_data_using_train(trait, conf_without_age, id_train)
+  } else if (remove_age == 1) {
+    conf_with_age <- confound_selection_using_train(conf, conf_names, id_train, 1)
+    trait <- deconfound_data_using_train(trait, conf_with_age, id_train)
+    # idps <- deconfound_data_using_train(idps, conf_with_age, id_train)
+  }
+  conf <- conf_without_age
 
+  # perform ICA on idps
+  df_all <- data.frame(y = trait, x = idps)
+  df_all_train <- df_all[id_train, ]
 
-
-#   pre_processed_data <- list()
-# #  pre_processed_data$idps_with_nans <- idps_with_nans
-#   pre_processed_data$df_all_train <- df_all_train
-#   pre_processed_data$idps <- idps
-#   pre_processed_data$trait <- trait
-#   pre_processed_data$df_all <- df_all
-#   pre_processed_data$id_train <- id_train
-#   pre_processed_data$n_feat <- n_feat
-#   pre_processed_data$age <- age
-
-#   return(pre_processed_data)
-
-  #return(list(df_all_train, idps, trait, df_all, id_train, age, conf))
   return(list(df_all_train = df_all_train, idps = idps, trait = trait, df_all = df_all, id_train = id_train, age = age, conf = conf, cca_object_idps_trait = cca_object_idps_trait, ica_object_idps = ica_object_idps))
 }
 
@@ -205,13 +211,19 @@ de_mean_trait_using_train <- function(trait, id_train) {
 
 #### we no longer impute because it's mostly just subjects without
 #### any recorded IDPs so better to remove than have 'mean' subjects
-# impute_data_using_train <- function(idps, id_train) {
+# impute_data_using_train <- function(idps, id_train, max_nans = 1000) {
 
 #   # note train and test idps
 #   idps_train <- idps[id_train, ]
 #   idps_test <- idps[-id_train, ]
 
-#   # Compute the mean of each column in the training set, ignoring NA values
+#   # Compute the number of NaNs for each subject in the training set
+#   nan_counts_train <- rowSums(is.na(idps_train))
+
+#   # Filter out subjects with more than max_nans NaNs
+#   idps_train <- idps_train[nan_counts_train <= max_nans, ]
+
+#   # Recalculate the means after filtering
 #   train_means <- colMeans(idps_train, na.rm = TRUE)
 
 #   # Function to impute missing values with the provided means
@@ -222,7 +234,7 @@ de_mean_trait_using_train <- function(trait, id_train) {
 #     return(data)
 #   }
 
-#   # Impute missing values in the training and test sets using the training means
+#   # Impute missing values in the filtered training set and in the test set using the training means
 #   idps_train_imputed <- impute_with_mean(idps_train, train_means)
 #   idps_test_imputed <- impute_with_mean(idps_test, train_means)
 
@@ -233,23 +245,73 @@ de_mean_trait_using_train <- function(trait, id_train) {
 #   return(idps)
 # }
 
+impute_and_filter_data <- function(idps, trait, age, conf, max_nans = 1000) {
 
-confound_selection_using_train <- function(conf, conf_names, id_train) {
+  # Compute the number of NaNs for each subject
+  nan_counts <- rowSums(is.na(idps))
+
+  # Create a mask for subjects with <= max_nans NaNs
+  keep_mask <- nan_counts <= max_nans
+
+  # Filter out subjects in idps, trait, and age based on the mask
+  idps_filtered <- idps[keep_mask, ]
+
+  # Handle trait being either a vector (1D) or a matrix (2D)
+  if (is.vector(trait)) {
+    trait_filtered <- trait[keep_mask]
+  } else if (is.matrix(trait)) {
+    trait_filtered <- trait[keep_mask, ]
+  } else {
+    stop("Trait must be either a 1D vector or a 2D matrix.")
+  }
+
+  age_filtered <- age[keep_mask]
+  conf_filtered <- conf[keep_mask, ]
+
+  # Calculate the means for each IDP, ignoring NA values
+  idps_means <- colMeans(idps_filtered, na.rm = TRUE)
+
+  # Impute missing values with the means
+  impute_with_mean <- function(data, means) {
+    for (i in seq_along(means)) {
+      data[is.na(data[, i]), i] <- means[i]
+    }
+    return(data)
+  }
+
+  # Impute the missing values in the filtered dataset
+  idps_imputed <- impute_with_mean(idps_filtered, idps_means)
+
+  #log_warn(paste0("Number of subjects removed due to missing idp/trait: ", sum(!keep_mask)))
+
+  return(list(idps = idps_imputed, trait = trait_filtered, age = age_filtered, conf = conf_filtered))
+}
+
+
+confound_selection_using_train <- function(conf, conf_names, id_train, remove_age) {
 
   ### first we do stuff not based on training/test split
   log_info(paste0("Number of total possible confounds: ", dim(conf)[2]))
 
   # first remove essential confounds
-  conf_list <- remove_essential_confounds(conf, conf_names)
+  conf_list <- remove_essential_confounds(conf, conf_names, remove_age)
+
+  # note essential confounds
   conf_ess <- conf_list$conf_ess
+
+  # note the remaining confounds other than the essential ones
   conf_remove_ess <- conf_list$conf_remove_ess
   conf_names_remove_ess <- conf_list$conf_names_remove_ess
 
   # now remove 'age' confounds
-  conf_remove_age <- remove_confounds_by_name(conf_remove_ess, conf_names_remove_ess, "Age")
+  if (remove_age == 0) {
+    conf_all <- remove_confounds_by_name(conf_remove_ess, conf_names_remove_ess, "Age")
+  } else if (remove_age == 1) {
+    conf_all <- conf_remove_ess
+  }
 
   # Dimensionality reduction
-  conf_svd <- svd_reduce_conf_using_train(conf_remove_age, id_train)
+  conf_svd <- svd_reduce_conf_using_train(conf_all, id_train)
 
   # Combine essential and reduced confounds
   conf <- cbind(conf_ess, conf_svd)
@@ -477,16 +539,25 @@ get_idp_train_inner <- function(df_train, prop_train_inner) {
 
 }
 
-remove_essential_confounds <- function(conf, conf_names) {
+remove_essential_confounds <- function(conf, conf_names, remove_age) {
   # Main function to select confounds
-  
-  # note essential confounds
-  ess_confounds <- c("Sex_1_Site_1", "Sex_1_Site_2", "Sex_1_Site_3",
+  if (remove_age == 0) {
+    ess_confounds <- c("Sex_1_Site_1", "Sex_1_Site_2", "Sex_1_Site_3",
                      "Site_1_vs_2", "Site_1_vs_3", "HeadSize_Site_1",
                      "HeadSize_Site_2", "HeadSize_Site_3",
                      "HeadMotion_mean_rfMRI_rel_Site_1",
                      "HeadMotion_mean_rfMRI_rel_Site_2",
                      "HeadMotion_mean_rfMRI_rel_Site_3")
+  } else if (remove_age == 1) {
+    ess_confounds <- c("Age_Site_1", "Age_Site_2", "Age_Site_3",
+                     "AgeSex_Site_1", "AgeSex_Site_2", "AgeSex_Site_3",
+                     "Sex_1_Site_1", "Sex_1_Site_2", "Sex_1_Site_3",
+                     "Site_1_vs_2", "Site_1_vs_3", "HeadSize_Site_1",
+                     "HeadSize_Site_2", "HeadSize_Site_3",
+                     "HeadMotion_mean_rfMRI_rel_Site_1",
+                     "HeadMotion_mean_rfMRI_rel_Site_2",
+                     "HeadMotion_mean_rfMRI_rel_Site_3")
+  }
 
   # get values of essential confounds
   #ess_confounds_idx <- sapply(ess_confounds, function(name) which(unlist(conf_names) == name))

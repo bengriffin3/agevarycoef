@@ -74,8 +74,9 @@ test_that("pre_process_data_cross_validated correctly preprocess the data", {
   ica <- 1
   n_feat <- 5
   trait_id <- 999
+  remove_age <- 0
 
-  result <- pre_process_data_cross_validated(idps_randomized, trait_randomized, trait_id, age_randomized, conf_randomized, conf_names_randomized, prop_train, ica, n_feat)
+  result <- pre_process_data_cross_validated(idps_randomized, trait_randomized, trait_id, age_randomized, conf_randomized, conf_names_randomized, prop_train, ica, n_feat, remove_age)
   # Unpack the results
   df_all_train <- result$df_all_train
   idps <- result$idps

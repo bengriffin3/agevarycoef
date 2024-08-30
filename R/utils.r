@@ -19,13 +19,31 @@ save_training_data <- function (proj_dir, trait_id, n_feat, n_sub, perc_train, i
 
 }
 
-check_for_existing_model <- function(proj_dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica, run_svc, model_age) {
+check_for_existing_model <- function(proj_dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica, run_svc, model_age, remove_age) {
 
-  dir <- paste0(proj_dir, "/results/results_GP")
-  file1 <- sprintf("%s/rel_t_%i_f_%i_n_%i_p_%i_l_%i_ta_%i_c_%s_ica_%i_svc_%i_mi_%i.RData",
-                      dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica, run_svc, model_age)
+  save_dir <- paste0(proj_dir, "/results/results_with_boost")
+  if (remove_age == 0) {
+    if (run_svc == 1) {
+      file1 <- sprintf("%s/results_t_%i_f_%i_n_%i_p_%i_ica_%i_mi_%i_svc_%i_l_%i_ta_%i_c_%s.RData",
+                        save_dir, trait_id, n_feat, n_sub, perc_train, ica, model_age, run_svc, prof, tap, cov)
+    } else {
+        file1 <- sprintf("%s/results_t_%i_f_%i_n_%i_p_%i_ica_%i_mi_%i_svc_%i.RData",
+                          save_dir, trait_id, n_feat, n_sub, perc_train, ica, model_age, run_svc)
+    }
+  } else if (remove_age == 1) {
+    if (run_svc == 1) {
+        file1 <- sprintf("%s/results_t_%i_f_%i_n_%i_p_%i_ica_%i_mi_%i_svc_%i_l_%i_ta_%i_c_%s_ra_%i.RData",
+                          save_dir, trait_id, n_feat, n_sub, perc_train, ica, model_age, run_svc, prof, tap, cov, remove_age)
+    } else {
+        file1 <- sprintf("%s/results_t_%i_f_%i_n_%i_p_%i_ica_%i_mi_%i_svc_%i_ra_%i.RData",
+                          save_dir, trait_id, n_feat, n_sub, perc_train, ica, model_age, run_svc, remove_age)
+    }
+  }
+
+
   if (file.exists(file1)) {
     print("Model already run so exiting...")
+    stop("Model already run")
     #Sys.sleep(5)
     #quit()
   }
