@@ -426,19 +426,19 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
 
   for (i in seq_along(folds)) {
     print(paste("Fold", i))
-    
+
     test_idx <- folds[[i]]
     train_idx <- setdiff(seq_len(nrow(df_boost)), test_idx)
-    
+
     df_train_x <- as.matrix(df_boost[train_idx, ][, !names(df_boost[train_idx, ]) %in% c("y")])
     df_train_y <- as.matrix(df_boost[train_idx, ]$y)
-    
+
     df_test_x <- as.matrix(df_boost[test_idx, ][, !names(df_boost[test_idx, ]) %in% c("y")])
     df_test_y <- as.matrix(df_boost[test_idx, ]$y)
-    
+
     train_lgb <- lgb.Dataset(data = df_train_x, label = df_train_y)
     test_lgb <- lgb.Dataset(data = df_test_x, label = df_test_y)
-    
+
     # Train the LightGBM model
     lgb_model <- lgb.train(
       params = params,
@@ -477,7 +477,6 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
   ))
 }
 
-
 get_model_stats <- function(predictions_train, predictions_test, df_all_train_y, df_all_test_y) {
 
   # Calculate Mean Squared Error
@@ -501,10 +500,7 @@ get_model_stats <- function(predictions_train, predictions_test, df_all_train_y,
 
 return(list(mse_test = mse_test, mse_train = mse_train, r_squared_test = r_squared_test, r_squared_train = r_squared_train, corr_test = corr_test, corr_train = corr_train))}
 
-
-
 run_xgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y) {
-
 
   dtrain <- xgb.DMatrix(data = df_all_train_x, label = df_all_train_y)
   dtest <- xgb.DMatrix(data = df_all_test_x, label = df_all_test_y)
@@ -535,7 +531,6 @@ run_xgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
   return(list(predictions_train, predictions_test, xgb_model))
 }
 
-
 get_importance_matrix <- function(model, run_svc) {
 
   if (run_svc == 2) {
@@ -546,7 +541,6 @@ get_importance_matrix <- function(model, run_svc) {
 
   return(importance_matrix)
 }
-
 
 get_mean_accuracies_across_cv <- function(corr_train_cv, corr_test_cv, mse_train_cv, mse_test_cv, r_squared_train_cv, r_squared_test_cv) {
     corr_train <- mean(corr_train_cv)
@@ -566,236 +560,6 @@ get_mean_accuracies_across_cv <- function(corr_train_cv, corr_test_cv, mse_train
 return(list(corr_train=corr_train, corr_test=corr_test, mse_train=mse_train, mse_test=mse_test, r_squared_train=r_squared_train, r_squared_test=r_squared_test))
 
 }
-
-#### manual hyperparameter search test
-#### I basically found out it makes very little difference
-
-# lr_list <- c()
-# nl_list <- c()
-# md_list <- c()
-# bf_list <- c()
-# la_list <- c()
-# lb_list <- c()
-
-  # corr_test_list  <- rep(NA, 2*2*2*2*2*2)
-  # corr_train_list  <- rep(NA, 2*2*2*2*2*2)
-  # j <- 0
-  # for (lr in c(0.01, 0.3)) {
-  #   for (nl in c(15, 63)) {
-  #     for (md in c(-1, 10)) {
-  #       for (bf in c(0.4, 0.8)) {
-  #         for (la in c(0.1, 0.5)) {
-  #           for (lb in c(0.1, 0.5)) {
-  #             # for (ne in c(100, 200)) {
-
-  #   j <- j + 1
-  # # run lightGBM model
-  #   params <- list(
-  #   objective = "regression",
-  #   metric = "l2",
-  #   learning_rate = lr,
-  #   num_leaves = nl,
-  #   min_data_in_leaf = 10,
-  #   max_depth = md,
-  #   lambda_l1 = la,           # L1 regularization # 0.3 0.5
-  #   lambda_l2 = lb,            # L2 regularization # 0.3 0.5
-  #   bagging_fraction = bf, # 0.6 0.4
-  #   bagging_freq = 1
-  #   # n_estimators = 100 # 200
-  # )
-
-
-  # list[yhat_train, yhat_test, model_fit] <- run_lgboost_model(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y, params)
-
-  # # calculate statistics for the given predictions
-  # list[mse_test, mse_train, r_squared_test, r_squared_train, corr_test, corr_train] <- get_model_stats(yhat_train, yhat_test, df_all_train_y, df_all_test_y)
-
-  # corr_train_list[j] <- corr_train
-  # corr_test_list[j] <- corr_test
-  
-  # }
-  # }
-  # }
-  # }
-  # }
-  #   }
-  # print(corr_train_list)
-  # print(corr_test_list)
-
-
-
-# # Create dataframe
-# results_df <- data.frame(
-#   learning_rate = lr_list,
-#   num_leaves = nl_list,
-#   max_depth = md_list,
-#   bagging_fraction = bf_list,
-#   lambda_l1 = la_list,
-#   lambda_l2 = lb_list,
-#   corr_train = corr_train_list,
-#   corr_test = corr_test_list
-# )
-
-
-# determine_best_svc_features <- function(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, ica) {
-
-#   # determine best features (svc)
-#   print("Getting best svc features")
-#   if (ica == 3 || ica == 5) {
-#     best_features_svc <- 1:n_feat
-#   } else {
-#     if (trait_id == 1000) {
-#       best_features_svc <- 1:n_feat
-#     } else {
-#      best_features_svc <- get_best_feat_svc(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n_feat, ica)
-#     }
-#   }
-
-#   return(best_features_svc)
-
-# }
-
-
-# get_best_feat_lin <- function(df_train, prop_train_inner, extract_n_feat, age_train, model) {
-#   #- get_best_feat_lin(df_train, perc_train / 100, n_feat, age_train, "linear")
-
-#   n_feat <- dim(df_train)[2] - 1
-#   corr <- numeric(n_feat)
-
-#   id_train_inner <- get_idp_train_inner(df_train, prop_train_inner)
-
-#   for (idp in 1:n_feat) {
-#     print(paste("IDP number: ", idp))
-
-#     if (model == "linear") {
-
-#       # run univariate predictions
-#       prediction_list <- run_univ_pred_lm(df_train, id_train_inner, idp)
-
-#       yhat <- prediction_list$yhat
-
-#       # test for significance (of betas or accuracy?)
-#       corr[idp] <- cor(yhat, df_train$y[-id_train_inner])
-
-#     } else if (model == "svc") {
-#       # run univariate predictions
-#       prediction_list <- run_univ_pred_svc(df_train, id_train_inner, idp, age_train, svc_config)
-
-#       # test for significance (of betas or accuracy?)
-#       corr[idp] <- cor(prediction_list$yhat, df_train$y[-id_train_inner])
-#     }
-#   }
-
-#   # select best features
-#   best_n_features <- extract_best_features(corr, extract_n_feat)
-
-#   return(best_n_features)
-# }
-
-
-# run_univ_pred_lm <- function(df_train_all, id_train_inner, idp) {
-
-#   # get training subjects dataframe
-#   df_train_inner <- data.frame(df_train_all[id_train_inner, c(1, idp + 1)])
-#   df_test_inner <- data.frame(df_train_all[-id_train_inner, c(1, idp + 1)])
-
-#   # fit model
-#   fit_lm <- lm(y ~ ., df_train_inner)
-
-#   # make predictions
-#   yhat_insample <- predict(fit_lm, df_train_inner)
-#   y_insample <- df_train_inner$y
-#   yhat <- predict(fit_lm, df_test_inner)
-#   y <- df_test_inner$y
-
-#   prediction_list <- list("yhat" = yhat, "y" = y, "fit_lm" = fit_lm, "yhat_insample" = yhat_insample, "y_insample" = y_insample)
-
-#   return(prediction_list)
-# }
-
-
-# get_best_feat_svc <- function(trait_id, n_feat, n_sub, perc_train, prof, tap, cov, n, ica) {
-#   dir <- '/gpfs3/well/win-fmrib-analysis/users/psz102/age_varying_coefficients/results/univariate'
-#   perc_train <- 90 #75 # might want to update this to 90
-#   n_idps <- 1436 # 10
-#   n_sub <- 20000 # 10000
-#   n_feat <- 1436 # 10
-#   model_intercept <- 0
-#   ica <- 0
-#   prof <- 0
-#   corr <- rep(NA, n_idps)
-#   tap <- 0
-#   trait_id <- 999 ##### NEED TO SORT THIS OUT FOR EACH INDIVIDUAL TRAIT
-
-
-#   for (idp in 1:n_idps) {
-#     print(idp)
-#     pred <- try(load(sprintf("%s/yhat_t_%i_n_f_%i_f_1436_n_%i_p_%i_l_%i_ta_%i_c_%s_idp_%i_ica_%i_mi_%i.RData",
-#                   dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, idp, ica, model_intercept)))
-#     if (inherits(pred, "try-error")) {
-#       #error handling code, maybe just skip this iteration using
-#       next
-#     }
-#     # pred <- mget(load(sprintf("%s/yhat_t_%i_f_1436_n_%i_p_%i_l_%i_ta_%i_c_%s_idp_%i_ica_%i.RData",
-#     #              dir, trait_id, n_sub, perc_train, prof, tap, cov, idp, ica), envir=(NE. <- new.env())), envir=NE.)
-
-#     # y <- extractorRData(sprintf("%s/yhat_t_%i_n_f_%i_f_1436_n_%i_p_%i_l_%i_ta_%i_c_%s_idp_%i_ica_%i_mi_%i.RData",
-#     #               dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, idp, ica, model_intercept), 'y') 
-
-#     # yhat <- extractorRData(sprintf("%s/yhat_t_%i_n_f_%i_f_1436_n_%i_p_%i_l_%i_ta_%i_c_%s_idp_%i_ica_%i_mi_%i.RData",
-#     #               dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, idp, ica, model_intercept), 'yhat') 
-
-#     corr_svc <- extractorRData(sprintf("%s/yhat_t_%i_n_f_%i_f_1436_n_%i_p_%i_l_%i_ta_%i_c_%s_idp_%i_ica_%i_mi_%i.RData",
-#                    dir, trait_id, n_feat, n_sub, perc_train, prof, tap, cov, idp, ica, model_intercept), 'corr_svc')
-                                      
-#     corr[idp] <- corr_svc #cor(y, yhat)
-#     #corr[idp] <- cor(pred$y, pred$yhat)
-#   }
-#   # get idx of best 'n' features
-#   idx_best_features <- extract_best_features(corr, n)
-
-#   return(idx_best_features)
-# }
-
-# run_univ_pred_svc <- function(df_train, id_train_inner, idp, age_train, svc_config, model_vary_intercept) {
-
-#   # get training subjects dataframe (including age to act as modulator)
-#   age_train_inner <- age_train[id_train_inner]
-#   age_test_inner <- age_train[-id_train_inner]
-
-#   # create dataframes
-#   df_train_inner <- data.frame(df_train[id_train_inner, c(1, idp + 1)], age_train_inner)
-#   df_test_inner <- data.frame(df_train[-id_train_inner, c(1, idp + 1)], age_test_inner)
-
-#   colnames(df_train_inner)[2] <- "idp"
-#   colnames(df_test_inner)[2] <- "idp"
-
-#   # fit model (depends on if we want to model intercept)
-#   if (model_vary_intercept == 1) {
-#     fit_svc <- SVC_mle(formula = y ~ idp, data = df_train_inner, locs = df_train_inner$age_train_inner)
-#   } else if (model_vary_intercept == 0) {
-#     fit_svc <- SVC_mle(formula = y ~ idp, data = df_train_inner, locs = df_train_inner$age_train_inner, RE_formula = y ~ idp - 1)
-#   }
-
-#   # make prediction
-#   df_svc_pred <- predict(fit_svc, newdata = df_test_inner, newlocs = df_test_inner$age_test_inner, control = svc_config)
-#   df_svc_pred_insample <- predict(fit_svc, newdata = df_train_inner, newlocs = df_train_inner$age_train_inner, control = svc_config)
-
-#   # note down predictions
-#   yhat <- df_svc_pred$y.pred
-#   y <- df_train$y[-id_train_inner]
-#   yhat_insample <- df_svc_pred_insample$y.pred
-#   y_insample <- df_train$y[id_train_inner]
-
-#   # make prediction
-#   #df_svc_pred <- predict(fit_svc, newlocs = df_test_inner$age_test_inner)
-
-
-#   # create list of prediction and target
-#   prediction_list <- list("yhat" = yhat, "y" = y, "fit_svc" = fit_svc, "yhat_insample" = yhat_insample, "y_insample" = y_insample)
-
-#   return(prediction_list)
-# }
 
 # Define cross-validation function
 # cv_model_splines <- function(data, k = 10) {
