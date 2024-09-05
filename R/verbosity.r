@@ -7,14 +7,10 @@ library(logger)
 library(glmnet)
 library(knitr)
 
-print_info <- function(trait, n_sub, perc_tn, prof, tap, cov, run_svc, remove_age, n_feat=1) {
-  print(paste0("Trait: ", trait))
+print_info <- function(trait_id, n_sub, run_svc, remove_age, model_age, n_feat=1) {
+  print(paste0("Trait: ", trait_id))
   print(paste0("Number of features: ", n_feat))
   print(paste0("Number of subjects: ", n_sub))
-  print(paste0("Proportion of training subjects: ", perc_tn))
-  print(paste0("Profile likelihood: ", prof))
-  print(paste0("Covariance tapering: ", tap))
-  print(paste0("Cov func: ", cov))
   print(paste0("Run SVC: ", run_svc))
   print(paste0("Deconfound age: ", remove_age))
 }

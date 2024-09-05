@@ -48,7 +48,12 @@ remove_nan_sub <- function(idps, trait, age, conf) {
 
   idx_keep <- complete.cases(age, conf) #idx_keep <- complete.cases(idps, trait, age, conf)
 
-  idps <- idps[idx_keep, ]
+  if (is.array(idps)) {
+    idps <- idps[idx_keep, ]
+  } else {
+    idps <- idps[idx_keep]
+  }
+
   if (is.array(trait)) {
     trait <- trait[idx_keep, ]
   } else {
@@ -393,4 +398,59 @@ simulate_linear_trait <- function(age, features) {
   trait <- coeff_age * age_imputed + features_imputed %*% coeff_X + noise
 
   return(trait)
+}
+
+impute_and_filter_data <- function(idps, trait, age, conf, max_nans = 1000) {
+
+  # If univariate prediction then just impute the variable
+  if (is.vector(idps)) {
+    keep_mask <- rep(TRUE, length(idps))
+    idps_filtered <- idps[keep_mask]
+    # Calculate the means for each IDP, ignoring NA values
+    idps_means <- mean(idps_filtered, na.rm = TRUE)
+  } else {
+    # Compute the number of NaNs for each subject
+    nan_counts <- rowSums(is.na(idps))
+    # Create a mask for subjects with <= max_nans NaNs
+    keep_mask <- nan_counts <= max_nans
+    # filter idps and calc mean of filtered
+    idps_filtered <- idps[keep_mask, ]
+    # Calculate the means for each IDP, ignoring NA values
+    idps_means <- colMeans(idps_filtered, na.rm = TRUE)
+  }
+
+  # Filter out subjects in trait and age based on the mask
+  if (is.vector(trait)) {
+    trait_filtered <- trait[keep_mask]
+  } else if (is.matrix(trait)) {
+    trait_filtered <- trait[keep_mask, ]
+  } else {
+    stop("Trait must be either a 1D vector or a 2D matrix.")
+  }
+
+  age_filtered <- age[keep_mask]
+  conf_filtered <- conf[keep_mask, ]
+
+  # Impute the missing values in the filtered dataset
+  idps_imputed <- impute_with_mean(idps_filtered, idps_means)
+
+  #log_warn(paste0("Number of subjects removed due to missing idp/trait: ", sum(!keep_mask)))
+
+  return(list(idps = idps_imputed, trait = trait_filtered, age = age_filtered, conf = conf_filtered))
+}
+
+
+# Impute missing values with the means
+impute_with_mean <- function(data, means) {
+
+  if (length(means) == 1) {
+    data[is.na(data)] <- means
+
+  } else {
+    for (i in seq_along(means)) {
+      data[is.na(data[, i]), i] <- means[i]
+    }
+  }
+
+  return(data)
 }

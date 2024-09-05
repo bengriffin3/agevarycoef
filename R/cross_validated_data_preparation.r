@@ -7,99 +7,158 @@ library(logger)
 library(glmnet)
 library(gsubfn)
 
+pre_process_data_cross_validated <- function(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age=0, ica=0, n_feat=0) {
 
-pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, conf_names, prop_train, ica, n_feat=0, remove_age=0) {
+  # scale idps (and age) using training data
+  idps <- scale_data_using_train(idps, train_idx)
+  age <- scale_data_using_train(age, train_idx)
 
-  # Remove subjects with NaNs in idps and age
-  # idps_with_nans <- idps
-  clean_data <- remove_nan_sub(idps, trait, age, conf)
-  idps <- clean_data$idps
-  trait <- clean_data$trait
-  age <- clean_data$age
-  conf <- clean_data$conf
 
-  ####################### NEED TO BE CAREFUL WITH DECISION MAKING HERE
-  ####################### MIGHT BE WORTH IMPUTING BASED ON TRAINING DATA ONLY
-
-  # impute data for IDPS if subjects are missing 1000 or more IDP values
-  imputed_data <- impute_and_filter_data(idps, trait, age, conf, max_nans = 1000)
-  idps <- imputed_data$idps
-  trait <- imputed_data$trait
-  age <- imputed_data$age
-  conf <- imputed_data$conf
-
-  # impute trait if subjects are missing 2 or more trait values
-  imputed_data <- impute_and_filter_data(trait, idps, age, conf, max_nans = 2)
-  idps <- imputed_data$trait
-  trait <- imputed_data$idps
-  age <- imputed_data$age
-  conf <- imputed_data$conf
-
-  # note training subjects
-  id_train <- get_training_sample_id(trait, prop_train)
-
-  # scale idps (and age)
-  idps <- scale_data_using_train(idps, id_train)
-  age <- scale_data_using_train(age, id_train)
   cca_object_idps_trait <- 0
   ica_object_idps <- 0
+
   # perform CCA or PC
   if (trait_id == 999) {
-    cca_list <- perform_cca_using_train(idps, id_train, trait)
+    cca_list <- perform_cca_using_train(idps, train_idx, trait)
     trait <- cca_list[[1]]
-    cca_object_idps_trait <- cca_list[[2]]
-    #pca_object_idps_for_cca <- cca_list[[3]]
-    #pca_object_trait <- cca_list[[4]] # we have already performed PCA so ignore this
+    # cca_object_idps_trait <- cca_list[[2]]
   } else if (trait_id == 0) {
-    # perform pca
-    trait_pca_list <- perform_pca_using_train(trait, id_train, 1)
-    trait_pca <- trait_pca_list[[1]]
-    #pca_object_trait <- trait_pca_list[[2]]
-    trait <- trait_pca
+    trait_pca_list <- perform_pca_using_train(trait, train_idx, 1)
+    trait <- trait_pca_list[[1]]
   }
 
-  if (ica == 1) {
-    # choose whether to upweight idps (this seems to do very very little)
-    upweight <- 0
-    if (upweight == 1) {
-      idps_upweight <- upweight_idps_using_train(idps, id_train, trait)
-      idps <- idps_upweight
-    }
-    idps_ica_list <- perform_ica_using_train(idps, id_train, n_feat)
-    idps_ica <- idps_ica_list[[1]]
-    idps <- idps_ica
-    ica_object_idps <- idps_ica_list[[2]]
-  } else if (ica == 4) {
-    idps_pca_list <- perform_pca_using_train(idps, id_train)
-    idps <- idps_pca_list[[1]]
-  } else if (ica == 5) {
-    load("/gpfs3/well/win-fmrib-analysis/users/psz102/age_varying_coefficients/data/idx_1436_keep_16_ordered.Rdata")
-    # select best idps
-    idps_best_16 <- idps[, idx_1436_keep_16_ordered]
-    idps <- idps_best_16[, 1:n_feat]
-  }
+  # deprecated (but might come back to use this)
+  # if (ica == 1) {
+  #   # choose whether to upweight idps (this seems to do very very little)
+  #   upweight <- 0
+  #   if (upweight == 1) {
+  #     idps_upweight <- upweight_idps_using_train(idps, train_idx, trait)
+  #     idps <- idps_upweight
+  #   }
+  #   idps_ica_list <- perform_ica_using_train(idps, train_idx, n_feat)
+  #   idps_ica <- idps_ica_list[[1]]
+  #   idps <- idps_ica
+  #   ica_object_idps <- idps_ica_list[[2]]
+  # } else if (ica == 4) {
+  #   idps_pca_list <- perform_pca_using_train(idps, train_idx)
+  #   idps <- idps_pca_list[[1]]
+  # } else if (ica == 5) {
+  #   load("/gpfs3/well/win-fmrib-analysis/users/psz102/age_varying_coefficients/data/idx_1436_keep_16_ordered.Rdata")
+  #   # select best idps
+  #   idps_best_16 <- idps[, idx_1436_keep_16_ordered]
+  #   idps <- idps_best_16[, 1:n_feat]
+  # }
 
   # de-mean target
-  trait <- de_mean_trait_using_train(trait, id_train)
+  trait <- de_mean_trait_using_train(trait, train_idx)
 
-  # # deconfound IDPS
-  conf_without_age <- confound_selection_using_train(conf, conf_names, id_train, 0)
-  # idps <- deconfound_data_using_train(idps, conf, id_train)
+  # deconfound IDPS (CURRENTLY USING PRE-DECONFOUNDED IDPs)
+  conf_without_age <- confound_selection_using_train(conf, conf_names, train_idx, 0)
+  # idps <- deconfound_data_using_train(idps, conf, train_idx)
   if (remove_age == 0) {
-    trait <- deconfound_data_using_train(trait, conf_without_age, id_train)
+    trait <- deconfound_data_using_train(trait, conf_without_age, train_idx)
   } else if (remove_age == 1) {
-    conf_with_age <- confound_selection_using_train(conf, conf_names, id_train, 1)
-    trait <- deconfound_data_using_train(trait, conf_with_age, id_train)
-    # idps <- deconfound_data_using_train(idps, conf_with_age, id_train)
+    conf_with_age <- confound_selection_using_train(conf, conf_names, train_idx, 1)
+    trait <- deconfound_data_using_train(trait, conf_with_age, train_idx)
+    idps <- deconfound_data_using_train(idps, conf_with_age, train_idx)
   }
   conf <- conf_without_age
 
-  # perform ICA on idps
-  df_all <- data.frame(y = trait, x = idps)
-  df_all_train <- df_all[id_train, ]
-
-  return(list(df_all_train = df_all_train, idps = idps, trait = trait, df_all = df_all, id_train = id_train, age = age, conf = conf, cca_object_idps_trait = cca_object_idps_trait, ica_object_idps = ica_object_idps))
+  return(list(idps = idps, trait = trait, age = age))
 }
+
+# pre_process_data_cross_validated <- function(idps, trait, trait_id, age, conf, conf_names, prop_train, ica, n_feat=0, remove_age=0) {
+
+#   # Remove subjects with NaNs in idps and age
+#   # idps_with_nans <- idps
+#   clean_data <- remove_nan_sub(idps, trait, age, conf)
+#   idps <- clean_data$idps
+#   trait <- clean_data$trait
+#   age <- clean_data$age
+#   conf <- clean_data$conf
+
+#   ####################### NEED TO BE CAREFUL WITH DECISION MAKING HERE
+#   ####################### MIGHT BE WORTH IMPUTING BASED ON TRAINING DATA ONLY
+
+#   # impute data for IDPS if subjects are missing 1000 or more IDP values
+#   imputed_data <- impute_and_filter_data(idps, trait, age, conf, max_nans = 1000)
+#   idps <- imputed_data$idps
+#   trait <- imputed_data$trait
+#   age <- imputed_data$age
+#   conf <- imputed_data$conf
+
+#   # impute trait if subjects are missing 2 or more trait values
+#   imputed_data <- impute_and_filter_data(trait, idps, age, conf, max_nans = 2)
+#   idps <- imputed_data$trait
+#   trait <- imputed_data$idps
+#   age <- imputed_data$age
+#   conf <- imputed_data$conf
+
+#   # note training subjects
+#   id_train <- get_training_sample_id(trait, prop_train)
+
+#   # scale idps (and age)
+#   idps <- scale_data_using_train(idps, id_train)
+#   age <- scale_data_using_train(age, id_train)
+#   cca_object_idps_trait <- 0
+#   ica_object_idps <- 0
+#   # perform CCA or PC
+#   if (trait_id == 999) {
+#     cca_list <- perform_cca_using_train(idps, id_train, trait)
+#     trait <- cca_list[[1]]
+#     cca_object_idps_trait <- cca_list[[2]]
+#     #pca_object_idps_for_cca <- cca_list[[3]]
+#     #pca_object_trait <- cca_list[[4]] # we have already performed PCA so ignore this
+#   } else if (trait_id == 0) {
+#     # perform pca
+#     trait_pca_list <- perform_pca_using_train(trait, id_train, 1)
+#     trait_pca <- trait_pca_list[[1]]
+#     #pca_object_trait <- trait_pca_list[[2]]
+#     trait <- trait_pca
+#   }
+
+#   if (ica == 1) {
+#     # choose whether to upweight idps (this seems to do very very little)
+#     upweight <- 0
+#     if (upweight == 1) {
+#       idps_upweight <- upweight_idps_using_train(idps, id_train, trait)
+#       idps <- idps_upweight
+#     }
+#     idps_ica_list <- perform_ica_using_train(idps, id_train, n_feat)
+#     idps_ica <- idps_ica_list[[1]]
+#     idps <- idps_ica
+#     ica_object_idps <- idps_ica_list[[2]]
+#   } else if (ica == 4) {
+#     idps_pca_list <- perform_pca_using_train(idps, id_train)
+#     idps <- idps_pca_list[[1]]
+#   } else if (ica == 5) {
+#     load("/gpfs3/well/win-fmrib-analysis/users/psz102/age_varying_coefficients/data/idx_1436_keep_16_ordered.Rdata")
+#     # select best idps
+#     idps_best_16 <- idps[, idx_1436_keep_16_ordered]
+#     idps <- idps_best_16[, 1:n_feat]
+#   }
+
+#   # de-mean target
+#   trait <- de_mean_trait_using_train(trait, id_train)
+
+#   # # deconfound IDPS
+#   conf_without_age <- confound_selection_using_train(conf, conf_names, id_train, 0)
+#   # idps <- deconfound_data_using_train(idps, conf, id_train)
+#   if (remove_age == 0) {
+#     trait <- deconfound_data_using_train(trait, conf_without_age, id_train)
+#   } else if (remove_age == 1) {
+#     conf_with_age <- confound_selection_using_train(conf, conf_names, id_train, 1)
+#     trait <- deconfound_data_using_train(trait, conf_with_age, id_train)
+#     # idps <- deconfound_data_using_train(idps, conf_with_age, id_train)
+#   }
+#   conf <- conf_without_age
+
+#   # perform ICA on idps
+#   df_all <- data.frame(y = trait, x = idps)
+#   df_all_train <- df_all[id_train, ]
+
+#   return(list(df_all_train = df_all_train, idps = idps, trait = trait, df_all = df_all, id_train = id_train, age = age, conf = conf, cca_object_idps_trait = cca_object_idps_trait, ica_object_idps = ica_object_idps))
+# }
 
 
 # scale_data_using_train <- function(idps, id_train) {
@@ -244,48 +303,6 @@ de_mean_trait_using_train <- function(trait, id_train) {
 
 #   return(idps)
 # }
-
-impute_and_filter_data <- function(idps, trait, age, conf, max_nans = 1000) {
-
-  # Compute the number of NaNs for each subject
-  nan_counts <- rowSums(is.na(idps))
-
-  # Create a mask for subjects with <= max_nans NaNs
-  keep_mask <- nan_counts <= max_nans
-
-  # Filter out subjects in idps, trait, and age based on the mask
-  idps_filtered <- idps[keep_mask, ]
-
-  # Handle trait being either a vector (1D) or a matrix (2D)
-  if (is.vector(trait)) {
-    trait_filtered <- trait[keep_mask]
-  } else if (is.matrix(trait)) {
-    trait_filtered <- trait[keep_mask, ]
-  } else {
-    stop("Trait must be either a 1D vector or a 2D matrix.")
-  }
-
-  age_filtered <- age[keep_mask]
-  conf_filtered <- conf[keep_mask, ]
-
-  # Calculate the means for each IDP, ignoring NA values
-  idps_means <- colMeans(idps_filtered, na.rm = TRUE)
-
-  # Impute missing values with the means
-  impute_with_mean <- function(data, means) {
-    for (i in seq_along(means)) {
-      data[is.na(data[, i]), i] <- means[i]
-    }
-    return(data)
-  }
-
-  # Impute the missing values in the filtered dataset
-  idps_imputed <- impute_with_mean(idps_filtered, idps_means)
-
-  #log_warn(paste0("Number of subjects removed due to missing idp/trait: ", sum(!keep_mask)))
-
-  return(list(idps = idps_imputed, trait = trait_filtered, age = age_filtered, conf = conf_filtered))
-}
 
 
 confound_selection_using_train <- function(conf, conf_names, id_train, remove_age) {

@@ -10,6 +10,7 @@ library(xgboost)
 library(data.table)
 library(caret)
 library(glmnetUtils)
+library(gsubfn)
 
 
 run_linear_model <- function(df_linear, id_train) {
@@ -31,7 +32,7 @@ run_linear_model <- function(df_linear, id_train) {
 }
 
 
-run_linear_model_cv <- function(df) {
+run_linear_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
   # training / test set accuracies
   print("Fitting linear model with 10-fold cross-validation...")
@@ -41,14 +42,24 @@ run_linear_model_cv <- function(df) {
   corr_test <- numeric(10)
 
   # Perform 10-fold cross-validation manually to calculate correlations
-  lm_yhat <- numeric(length(df$y)) # to store predictions
-  folds <- createFolds(df$y, k = 10)
+  lm_yhat <- numeric(length(age)) # to store predictions
+  trait_transformed <- numeric(length(age)) # to store predictions
+  folds <- createFolds(age, k = 10)
   models <- vector("list", 10)  # 10 folds, so 10 models
 
   for (i in seq_along(folds)) {
     print(paste("Fold", i))
     test_idx <- folds[[i]]
-    train_idx <- setdiff(seq_along(df$y), test_idx)
+    train_idx <- setdiff(seq_along(age), test_idx)
+
+    preprocessed_data <- pre_process_data_cross_validated(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
+    idps_fold <- preprocessed_data$idps
+    trait_fold <- preprocessed_data$trait
+    age_fold <- preprocessed_data$age
+
+    df <- data.frame(y = trait_fold, idps_fold)
+
+    df <- prepare_age_data(df, age_fold, model_age)
 
     # Train the model on the training fold (and save model info)
     fit_lm <- lm(y ~ ., data = df[train_idx, ])
@@ -64,6 +75,7 @@ run_linear_model_cv <- function(df) {
 
     # Store predictions in the original index positions
     lm_yhat[test_idx] <- lm_yhat_test
+    trait_transformed[test_idx] <- trait_fold[test_idx]
   }
 
   # Return the fitted model, predictions, and accuracies
@@ -71,10 +83,57 @@ run_linear_model_cv <- function(df) {
     lm_yhat = lm_yhat,
     corr_train = corr_train,
     corr_test = corr_test,
-    models = models
+    models = models,
+    trait_transformed = trait_transformed
   ))
 }
 
+
+# run_linear_model_cv <- function(df) {
+#   # We manually do the cross-validation so we can look at the predictions and compare
+#   # training / test set accuracies
+#   print("Fitting linear model with 10-fold cross-validation...")
+
+#   # Initialize vectors to store correlations for each fold
+#   corr_train <- numeric(10)
+#   corr_test <- numeric(10)
+
+#   # Perform 10-fold cross-validation manually to calculate correlations
+#   lm_yhat <- numeric(length(df$y)) # to store predictions
+#   folds <- createFolds(df$y, k = 10)
+#   models <- vector("list", 10)  # 10 folds, so 10 models
+
+#   for (i in seq_along(folds)) {
+#     print(paste("Fold", i))
+#     test_idx <- folds[[i]]
+#     train_idx <- setdiff(seq_along(df$y), test_idx)
+
+#     # list[df_all_train, idps_all, trait, df_all, id_train, age, conf, cca_object_idps_trait, ica_object_idps] <- pre_process_data_cross_validated(idps_all, trait, trait_id, age, conf, conf_names, prop_train, ica, 0, remove_age)
+
+#     # Train the model on the training fold (and save model info)
+#     fit_lm <- lm(y ~ ., data = df[train_idx, ])
+#     models[[i]] <- fit_lm
+
+#     # Predictions for the training and test set
+#     lm_yhat_train <- predict(fit_lm, newdata = df[train_idx, ])
+#     lm_yhat_test <- predict(fit_lm, newdata = df[test_idx, ])
+
+#     # Note train/test accuracies
+#     corr_train[i] <- cor(df$y[train_idx], lm_yhat_train)
+#     corr_test[i] <- cor(df$y[test_idx], lm_yhat_test)
+
+#     # Store predictions in the original index positions
+#     lm_yhat[test_idx] <- lm_yhat_test
+#   }
+
+#   # Return the fitted model, predictions, and accuracies
+#   return(list(
+#     lm_yhat = lm_yhat,
+#     corr_train = corr_train,
+#     corr_test = corr_test,
+#     models = models
+#   ))
+# }
 # Function to calculate performance metrics
 calculate_metrics <- function(actual_train, predicted_train, actual_test, predicted_test) {
   # Initialize results list
@@ -139,14 +198,15 @@ run_elastic_net_model <- function(idps_linear, trait, id_train, age, model_age) 
 }
 
 
-run_elastic_net_model_cv <- function(idps_linear, trait, age, model_age, alpha = 1, n_folds = 10) {
+run_elastic_net_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age, alpha = 1, n_folds = 10) {
   print("Fitting elastic net model with cross-validation...")
 
   # Initialize vectors to store predictions
-  enet_yhat <- numeric(length(trait))
+  yhat <- numeric(length(age))
+  trait_transformed <- numeric(length(age))
 
   # Create folds for cross-validation
-  folds <- createFolds(trait, k = n_folds)
+  folds <- createFolds(age, k = n_folds)
 
   # Initialize lists to store models and metrics
   models <- vector("list", n_folds)
@@ -158,22 +218,27 @@ run_elastic_net_model_cv <- function(idps_linear, trait, age, model_age, alpha =
 
     # Get train and test indices for the current fold
     test_idx <- folds[[i]]
-    train_idx <- setdiff(seq_along(trait), test_idx)
+    train_idx <- setdiff(seq_along(age), test_idx)
+
+    preprocessed_data <- pre_process_data_cross_validated(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
+    idps_fold <- preprocessed_data$idps
+    trait_fold <- preprocessed_data$trait
+    age_fold <- preprocessed_data$age
 
     # Prepare training and testing data
-    trait_train <- trait[train_idx]
-    idps_linear_train <- idps_linear[train_idx, ]
-    age_train <- matrix(age[train_idx])
+    trait_train <- trait_fold[train_idx]
+    idps_train <- idps_fold[train_idx, ]
+    age_train <- matrix(age_fold[train_idx])
 
-    trait_test <- trait[test_idx]
-    idps_linear_test <- idps_linear[test_idx, ]
-    age_test <- matrix(age[test_idx])
+    trait_test <- trait_fold[test_idx]
+    idps_test <- idps_fold[test_idx, ]
+    age_test <- matrix(age_fold[test_idx])
 
     # Fit the elastic net model
     if (model_age == 1 || model_age == 3) {
-      cvfit_glmnet <- cv.glmnet(cbind(idps_linear_train, age_train), trait_train, alpha = alpha)
+      cvfit_glmnet <- cv.glmnet(cbind(idps_train, age_train), trait_train, alpha = alpha)
     } else if (model_age == 0) {
-      cvfit_glmnet <- cv.glmnet(idps_linear_train, trait_train, alpha = alpha)
+      cvfit_glmnet <- cv.glmnet(idps_train, trait_train, alpha = alpha)
       # cvfit_glmnet <- cva.glmnet(idps_linear_train, trait_train, alpha = seq(0, 1, 0.05))
     } else if (model_age == 2) {
       cvfit_glmnet <- cv.glmnet(cbind(rep(1, length(age_train)), age_train), trait_train, alpha = alpha)
@@ -184,19 +249,19 @@ run_elastic_net_model_cv <- function(idps_linear, trait, age, model_age, alpha =
 
     # Make predictions
     if (model_age == 1 || model_age == 3) {
-      yhat_train <- predict(cvfit_glmnet, newx = cbind(idps_linear_train, age_train), s = "lambda.min")
-      yhat_test <- predict(cvfit_glmnet, newx = cbind(idps_linear_test, age_test), s = "lambda.min")
+      yhat_train <- predict(cvfit_glmnet, newx = cbind(idps_train, age_train), s = "lambda.min")
+      yhat_test <- predict(cvfit_glmnet, newx = cbind(idps_test, age_test), s = "lambda.min")
     } else if (model_age == 0) {
-      yhat_train <- predict(cvfit_glmnet, newx = idps_linear_train, s = "lambda.min")
-      yhat_test <- predict(cvfit_glmnet, newx = idps_linear_test, s = "lambda.min")
+      yhat_train <- predict(cvfit_glmnet, newx = idps_train, s = "lambda.min")
+      yhat_test <- predict(cvfit_glmnet, newx = idps_test, s = "lambda.min")
     } else if (model_age == 2) {
       yhat_train <- predict(cvfit_glmnet, newx = cbind(rep(1, length(age_train)), age_train), s = "lambda.min")
       yhat_test <- predict(cvfit_glmnet, newx = cbind(rep(1, length(age_test)), age_test), s = "lambda.min")
     }
 
     # Store predictions in the original index positions
-    enet_yhat[train_idx] <- yhat_train
-    enet_yhat[test_idx] <- yhat_test
+    yhat[test_idx] <- yhat_test
+    trait_transformed[test_idx] <- trait_fold[test_idx]
 
     # Calculate and store performance metrics
     corr_train[i] <- cor(trait_train, yhat_train)
@@ -205,184 +270,15 @@ run_elastic_net_model_cv <- function(idps_linear, trait, age, model_age, alpha =
 
   # Return results
   return(list(
-    enet_yhat = enet_yhat,
+    yhat = yhat,
     corr_train = corr_train,
     corr_test = corr_test,
-    models = models
-  ))
-}
-
-run_svc_model <- function(best_features, df, cov, prof, taper, age, model_age, id_train) {
-
-  svc_config <- configure_svc_model(cov, prof, taper)
-
-  # create data frame for SVC
-  df_svc <- df[, c(1, best_features + 1)]
-  df_svc$age <- age
-  fit_svc <- fit_svc_model(best_features, df, df_svc, id_train, age, model_age, svc_config) 
-  
-  # Predict using the trained model
-  df_svc_pred <- predict(fit_svc, newdata = df_svc, newlocs = age, control = svc_config)
-  yhat_train <- df_svc_pred$y.pred[id_train]
-  yhat_test <- df_svc_pred$y.pred[-id_train]
-
-  return(list(
-    fit_svc = fit_svc,
-    yhat_train = yhat_train,
-    yhat_test = yhat_test,
-    df_svc_pred = df_svc_pred
+    models = models,
+    trait_transformed = trait_transformed
   ))
 }
 
 
-configure_svc_model <- function(cov, prof, taper) {
-  # Configure SVC
-  svc_config <- SVC_mle_control(
-    cov.name = c(cov),
-    profileLik = prof,
-    tapering = taper,
-    hessian = TRUE
-  )
-
-  return(svc_config)
-}
-
-fit_svc_model <- function(best_features, df, df_svc, id_train, age, model_age, svc_config) {
-
-  print("Fitting SVC")
-
-  # Generate feature names
-  xnam <- paste("x.", best_features, sep = "")
-  fmla <- as.formula(paste("y ~ ", paste(xnam, collapse = "+")))
-
-  # get training data
-  df_train_svc <- df_svc[id_train, ]
-
-  # Fit the SVC model based on model_age
-  # Prepare formula for SVC model
-  if (model_age == 0) {
-    # Model without intercept
-    fmla_mi <- as.formula(paste("y ~ ", paste(xnam, collapse = "+"), " - 1"))
-    fit_svc <- SVC_mle(
-      formula = fmla, 
-      data = df_train_svc, 
-      locs = df_train_svc$age, 
-      control = svc_config, 
-      RE_formula = fmla_mi
-    )
-  } else if (model_age == 1) {
-    # Model with age as a covariate
-    fit_svc <- SVC_mle(
-      formula = fmla, 
-      data = df_train_svc, 
-      locs = df_train_svc$age, 
-      control = svc_config
-    )
-  } else if (model_age == 2) {
-    # Model with only age
-    fit_svc <- SVC_mle(
-      formula = as.formula("y ~ age"), 
-      data = df_train_svc, 
-      locs = df_train_svc$age, 
-      control = svc_config
-    )
-  } else if (model_age == 3) {
-    # Model with additional features
-    load(sprintf("/gpfs3/well/win-fmrib-analysis/users/psz102/age_varying_coefficients/results/univariate/ranking_idps_trait_id_%i_run_svc_0_nsub_46471_ra_0.RData", trait_id))
-    best_features_linear_add <- idp_ranking_trait[1:length(best_features)]
-
-    xnam <- paste("x.", c(best_features, best_features_linear_add), sep = "")
-    fmla_fix <- as.formula(paste("y ~ ", paste(xnam, collapse = "+")))
-    
-    # Add additional features to training and test data
-    extracted_columns <- df[id_train, paste0("x.", best_features_linear_add)]
-    df_train_svc <- cbind(df_train_svc, extracted_columns)
-    
-    extracted_columns_df <- df[, paste0("x.", best_features_linear_add)]
-    df_svc <- cbind(df, extracted_columns_df)
-    
-    fit_svc <- SVC_mle(
-      formula = fmla_fix, 
-      data = df_train_svc, 
-      locs = df_train_svc$age, 
-      control = svc_config, 
-      RE_formula = fmla
-    )
-  }
-
-    return(fit_svc)
-}
-
-
-
-run_svc_model_cv <- function(best_features, df, cov, prof, taper, age, model_age, n_folds = 10) {
-
-
-  # Create cross-validation folds
-  folds <- createFolds(df$y, k = n_folds)
-  
-  # Initialize vectors to store results
-  yhat_test_all <- numeric(nrow(df))
-  corr_train <- numeric(n_folds)
-  corr_test <- numeric(n_folds)
-  mse_train <- numeric(n_folds)
-  mse_test <- numeric(n_folds)
-  r_squared_train <- numeric(n_folds)
-  r_squared_test <- numeric(n_folds)
-
-
-   svc_config <- configure_svc_model(cov, prof, taper)
-
-  # create data frame for SVC
-  df_svc <- df[, c(1, best_features + 1)]
-  df_svc$age <- age
-
-  models <- vector("list", 10)  # 10 folds, so 10 models
-
-  # Perform cross-validation
-  for (i in seq_along(folds)) {
-    print(paste("Processing fold", i))
-    
-    # Define train and test indices
-    test_idx <- folds[[i]]
-    train_idx <- setdiff(seq_len(nrow(df)), test_idx)
-    
-    # Split data for this fold
-    df_train <- df[train_idx, ]
-    df_test <- df[test_idx, ]
-
-    fit_svc <- fit_svc_model(best_features, df, df_svc, train_idx, age, model_age, svc_config)
-    models[[i]] <- fit_svc
-  
-    # Predict using the trained model
-    df_svc_pred <- predict(fit_svc, newdata = df_svc, newlocs = age, control = svc_config)
-    yhat_train <- df_svc_pred$y.pred[train_idx]
-    yhat_test <- df_svc_pred$y.pred[test_idx]
-    
-    # Store predictions
-    yhat_test_all[test_idx] <- yhat_test
-    
-    # Calculate and store metrics
-    corr_train[i] <- cor(df$y[train_idx], yhat_train)
-    corr_test[i] <- cor(df$y[test_idx], yhat_test)
-    mse_train[i] <- mean((df$y[train_idx] - yhat_train) ^ 2)
-    mse_test[i] <- mean((df$y[test_idx] - yhat_test) ^ 2)
-    r_squared_train[i] <- 1 - (sum((df$y[train_idx] - yhat_train) ^ 2) / sum((df$y[train_idx] - mean(df$y[train_idx])) ^ 2))
-    r_squared_test[i] <- 1 - (sum((df$y[test_idx] - yhat_test) ^ 2) / sum((df$y[test_idx] - mean(df$y[test_idx])) ^ 2))
-  }
-  
-  # Return results
-  return(list(
-    yhat_test_all = yhat_test_all,
-    corr_train = corr_train,
-    corr_test = corr_test,
-    mse_train = mse_train,
-    mse_test = mse_test,
-    r_squared_train = r_squared_train,
-    r_squared_test = r_squared_test,
-    models=models
-  ))
-}
 
 determine_non_zero_coeff <- function(enet_coefficients) {
 
@@ -632,38 +528,39 @@ return(list(corr_train=corr_train, corr_test=corr_test, mse_train=mse_train, mse
 
 }
 
-run_spline_model_cv <- function(df_spline, age) {
+
+run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
   # training / test set accuracies
   print("Fitting spline model with 10-fold cross-validation...")
 
-  # add age to the dataframe
-  df_spline$age <- age
-
-  # rename x. column to idp
-  idp_column <- grep("^x\\.", names(df_spline), value = TRUE)
-  names(df_spline)[names(df_spline) == idp_column] <- "structural_IDP"
-
   # Initialize vectors to store correlations for each fold
   corr_train <- numeric(10)
   corr_test <- numeric(10)
-  mse_train <- numeric(10)
-  mse_test <- numeric(10)
-  r_squared_train <- numeric(10)
-  r_squared_test <- numeric(10)
 
 
   # Initialize a vector to store predictions
-  spline_yhat <- numeric(length(df_spline$y))
+  spline_yhat <- numeric(length(age))
 
   # Perform 10-fold cross-validation manually to calculate correlations
-  folds <- createFolds(df_spline$y, k = 10)
+  folds <- createFolds(age, k = 10)
   models <- vector("list", 10)  # 10 folds, so 10 models
 
   for (i in seq_along(folds)) {
     print(paste("Fold", i))
     test_idx <- folds[[i]]
     train_idx <- setdiff(seq_along(df_spline$y), test_idx)
+
+    preprocessed_data <- pre_process_data_cross_validated(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
+    idps_fold <- preprocessed_data$idps
+    trait_fold <- preprocessed_data$trait
+    age_fold <- preprocessed_data$age
+
+    df_spline <- data.frame(y = trait_fold, x = idps_fold, age = age_fold)
+
+    # rename x. column to idp
+    idp_column <- grep("^x\\.", names(df_spline), value = TRUE)
+    names(df_spline)[names(df_spline) == idp_column] <- "structural_IDP"
 
     # determine best df for spline
     spline_df <- determine_optimal_df_spline(df_spline, train_idx)
@@ -682,13 +579,8 @@ run_spline_model_cv <- function(df_spline, age) {
     # Note accuracies
     corr_train[i] <- cor(df_spline$y[train_idx], spline_yhat_train)
     corr_test[i] <- cor(df_spline$y[test_idx], spline_yhat_test)
-    mse_train[i] <- mean((df_spline$y[train_idx] - spline_yhat_train) ^ 2)
-    mse_test[i] <- mean((df_spline$y[test_idx] - spline_yhat_test) ^ 2)
-    r_squared_train[i] <- 1 - (sum((df_spline$y[train_idx] - spline_yhat_train) ^ 2) / sum((df_spline$y[train_idx] - mean(df_spline$y[train_idx])) ^ 2))
-    r_squared_test[i] <- 1 - (sum((df_spline$y[test_idx] - spline_yhat_test) ^ 2) / sum((df_spline$y[test_idx] - mean(df_spline$y[test_idx])) ^ 2))
 
     # Store predictions in the original index positions
-    #lm_yhat[train_idx] <- lm_yhat_train
     spline_yhat[test_idx] <- spline_yhat_test
   }
 
@@ -697,34 +589,42 @@ run_spline_model_cv <- function(df_spline, age) {
     spline_yhat = spline_yhat,
     corr_train = corr_train,
     corr_test = corr_test,
-    mse_train = mse_train,
-    mse_test = mse_test,
-    r_squared_train = r_squared_train,
-    r_squared_test = r_squared_test,
     models = models
   ))
 }
 
-run_spline_model_cv_enet <- function(df_spline, age, model_age) {
+run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   print("Fitting spline model with 10-fold cross-validation...")
-
-  # Add age to the dataframe and rename the structural_IDP column
-  df_spline$age <- age
-  idp_columns <- grep("^x\\.", names(df_spline), value = TRUE)
 
   # Initialize vectors to store correlations and MSE for each fold
   corr_train_cv <- numeric(10)
   corr_test_cv <- numeric(10)
-  spline_yhat <- numeric(length(df_spline$y))
+  spline_yhat <- numeric(length(age))
+  trait_transformed <- numeric(length(age))
 
   # Perform 10-fold cross-validation manually
-  folds <- createFolds(df_spline$y, k = 10)
+  folds <- createFolds(age, k = 10)
   models <- vector("list", 10)
 
   for (i in seq_along(folds)) {
     print(paste("Fold", i))
     test_idx <- folds[[i]]
-    train_idx <- setdiff(seq_along(df_spline$y), test_idx)
+    train_idx <- setdiff(seq_along(age), test_idx)
+
+    # preprocess data
+    preprocessed_data <- pre_process_data_cross_validated(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
+    idps_fold <- preprocessed_data$idps
+    trait_fold <- preprocessed_data$trait
+    age_fold <- preprocessed_data$age
+
+    # create data frame for spline model
+    if (is.vector(idps_fold)) {
+      df_spline <- data.frame(y = trait_fold, x.1 = idps_fold, age = age_fold)
+      idp_columns <- "x.1"
+    } else {
+      df_spline <- data.frame(y = trait_fold, x = idps_fold, age = age_fold)
+      idp_columns <- grep("^x\\.", names(df_spline), value = TRUE)
+    }
 
     # Determine the best df for the spline
     ########### need to sort this out with regularization I think
@@ -764,6 +664,7 @@ run_spline_model_cv_enet <- function(df_spline, age, model_age) {
 
     # Store predictions in the original index positions
     spline_yhat[test_idx] <- spline_yhat_test
+    trait_transformed[test_idx] <- trait_fold[test_idx]
   }
 
   # Return the fitted model, predictions, and accuracies
@@ -771,7 +672,8 @@ run_spline_model_cv_enet <- function(df_spline, age, model_age) {
     spline_yhat = spline_yhat,
     corr_train_cv = corr_train_cv,
     corr_test_cv = corr_test_cv,
-    models = models
+    models = models,
+    trait_transformed = trait_transformed
   ))
 }
 
@@ -820,205 +722,4 @@ determine_optimal_df_spline <- function(df_spline, train_idx) {
 
   return(best_df)
 
-}
-
-# Define cross-validation function
-cv_model_splines <- function(data, spline_order, k = 10) {
-    # Create the cross-validation folds
-    folds <- createFolds(data$cognition, k = k, list = TRUE, returnTrain = TRUE)
-    
-    # Initialize vectors to store predictions and actual values
-    all_predictions_linear <- numeric(nrow(data))
-    all_predictions_varycoef <- numeric(nrow(data))
-    all_predictions_elastic_net <- numeric(nrow(data))
-    all_actuals <- data$cognition
-    
-    cor_train_linear <- numeric(k)
-    cor_test_linear <- numeric(k)
-    cor_train_varycoef <- numeric(k)
-    cor_test_varycoef <- numeric(k)
-    cor_train_elastic_net <- numeric(k)
-    cor_test_elastic_net <- numeric(k)
-    
-    # Perform cross-validation
-    for (i in seq_along(folds)) {
-        # Split data into training and test sets
-        train_data <- data[folds[[i]], ]
-        test_data <- data[-folds[[i]], ]
-        
-        # Fit models
-        model_linear <- lm(cognition ~ Age + structural_IDP, data = train_data)
-        model_varycoef <- lm(cognition ~ ns(Age, df = (spline_order + 1)) * structural_IDP, data = train_data)
-        
-        # Prepare data for Elastic Net
-        x_train <- model.matrix(cognition ~ Age + structural_IDP, data = train_data)[, -1]
-        y_train <- train_data$cognition
-        x_test <- model.matrix(cognition ~ Age + structural_IDP, data = test_data)[, -1]
-        y_test <- test_data$cognition
-        
-        # Fit Elastic Net model with cross-validation for lambda
-        model_elastic_net <- cv.glmnet(x_train, y_train, alpha = 0.5)
-        
-        # Make predictions
-        train_data$predict_linear <- predict(model_linear, newdata = train_data)
-        train_data$predict_varycoef <- predict(model_varycoef, newdata = train_data)
-        test_data$predict_linear <- predict(model_linear, newdata = test_data)
-        test_data$predict_varycoef <- predict(model_varycoef, newdata = test_data)
-        
-        # Predict with Elastic Net model
-        test_data$predict_elastic_net <- predict(model_elastic_net, newx = x_test, s = "lambda.min")
-        
-        # Compute correlations and store them
-        cor_train_linear[i] <- cor(train_data$cognition, train_data$predict_linear)
-        cor_test_linear[i] <- cor(test_data$cognition, test_data$predict_linear)
-        cor_train_varycoef[i] <- cor(train_data$cognition, train_data$predict_varycoef)
-        cor_test_varycoef[i] <- cor(test_data$cognition, test_data$predict_varycoef)
-        cor_train_elastic_net[i] <- cor(train_data$cognition, predict(model_elastic_net, newx = x_train, s = "lambda.min"))
-        cor_test_elastic_net[i] <- cor(test_data$cognition, test_data$predict_elastic_net)
-        
-        # Store predictions
-        all_predictions_linear[which(!1:nrow(data) %in% folds[[i]])] <- test_data$predict_linear
-        all_predictions_varycoef[which(!1:nrow(data) %in% folds[[i]])] <- test_data$predict_varycoef
-        all_predictions_elastic_net[which(!1:nrow(data) %in% folds[[i]])] <- test_data$predict_elastic_net
-    }
-    
-    # Calculate correlation
-    cor_linear <- cor(all_actuals, all_predictions_linear)
-    cor_varycoef <- cor(all_actuals, all_predictions_varycoef)
-    cor_elastic_net <- cor(all_actuals, all_predictions_elastic_net)
-    
-    # Calculate R-squared
-    ss_total <- sum((all_actuals - mean(all_actuals))^2)
-    ss_residual_linear <- sum((all_actuals - all_predictions_linear)^2)
-    r_squared_linear <- 1 - (ss_residual_linear / ss_total)
-    
-    ss_residual_varycoef <- sum((all_actuals - all_predictions_varycoef)^2)
-    r_squared_varycoef <- 1 - (ss_residual_varycoef / ss_total)
-    
-    ss_residual_elastic_net <- sum((all_actuals - all_predictions_elastic_net)^2)
-    r_squared_elastic_net <- 1 - (ss_residual_elastic_net / ss_total)
-    
-    list(
-        cor_linear = cor_linear,
-        cor_varycoef = cor_varycoef,
-        cor_elastic_net = cor_elastic_net,
-        r_squared_linear = r_squared_linear,
-        r_squared_varycoef = r_squared_varycoef,
-        r_squared_elastic_net = r_squared_elastic_net,
-        cor_train_linear = cor_train_linear,
-        cor_test_linear = cor_test_linear,
-        cor_train_varycoef = cor_train_varycoef,
-        cor_test_varycoef = cor_test_varycoef,
-        cor_train_elastic_net = cor_train_elastic_net,
-        cor_test_elastic_net = cor_test_elastic_net,
-        all_predictions_linear = all_predictions_linear,
-        all_predictions_varycoef = all_predictions_varycoef,
-        all_predictions_elastic_net = all_predictions_elastic_net
-    )
-}
-
-# Define cross-validation function with a dynamic number of structural IDPs
-cv_model_splines_multivariate <- function(data, spline_order, k = 10) {
-    # Identify IDP columns (anything that isn't 'Age' or 'cognition')
-    idp_columns <- setdiff(names(data), c("Age", "cognition"))
-    
-    # Create the cross-validation folds
-    folds <- createFolds(data$cognition, k = k, list = TRUE, returnTrain = TRUE)
-    
-    # Initialize vectors to store predictions and actual values
-    all_predictions_linear <- numeric(nrow(data))
-    all_predictions_varycoef <- numeric(nrow(data))
-    all_predictions_elastic_net <- numeric(nrow(data))
-    all_actuals <- data$cognition
-    
-    cor_train_linear <- numeric(k)
-    cor_test_linear <- numeric(k)
-    cor_train_varycoef <- numeric(k)
-    cor_test_varycoef <- numeric(k)
-    cor_train_elastic_net <- numeric(k)
-    cor_test_elastic_net <- numeric(k)
-    
-    # Build the linear and varying-coefficient model formulas
-    linear_formula <- as.formula(paste("cognition ~ Age +", paste(idp_columns, collapse = " + ")))
-    
-    # Interaction terms with splines for each IDP
-    spline_terms <- paste0("ns(Age, df = ", spline_order + 1, ") * ", idp_columns)
-    varycoef_formula <- as.formula(paste("cognition ~", paste(spline_terms, collapse = " + ")))
-    
-    # Perform cross-validation
-    for (i in seq_along(folds)) {
-      print(i)
-        # Split data into training and test sets
-        train_data <- data[folds[[i]], ]
-        test_data <- data[-folds[[i]], ]
-        
-        # Fit models
-        model_linear <- lm(linear_formula, data = train_data)
-        model_varycoef <- lm(varycoef_formula, data = train_data)
-        
-        # Prepare data for Elastic Net
-        x_train <- model.matrix(linear_formula, data = train_data)[, -1]
-        y_train <- train_data$cognition
-        x_test <- model.matrix(linear_formula, data = test_data)[, -1]
-        y_test <- test_data$cognition
-        
-        # Fit Elastic Net model with cross-validation for lambda
-        model_elastic_net <- cv.glmnet(x_train, y_train, alpha = 0.5)
-        
-        # Make predictions
-        train_data$predict_linear <- predict(model_linear, newdata = train_data)
-        train_data$predict_varycoef <- predict(model_varycoef, newdata = train_data)
-        test_data$predict_linear <- predict(model_linear, newdata = test_data)
-        test_data$predict_varycoef <- predict(model_varycoef, newdata = test_data)
-        
-        # Predict with Elastic Net model
-        test_data$predict_elastic_net <- predict(model_elastic_net, newx = x_test, s = "lambda.min")
-        
-        # Compute correlations and store them
-        cor_train_linear[i] <- cor(train_data$cognition, train_data$predict_linear)
-        cor_test_linear[i] <- cor(test_data$cognition, test_data$predict_linear)
-        cor_train_varycoef[i] <- cor(train_data$cognition, train_data$predict_varycoef)
-        cor_test_varycoef[i] <- cor(test_data$cognition, test_data$predict_varycoef)
-        cor_train_elastic_net[i] <- cor(train_data$cognition, predict(model_elastic_net, newx = x_train, s = "lambda.min"))
-        cor_test_elastic_net[i] <- cor(test_data$cognition, test_data$predict_elastic_net)
-        
-        # Store predictions
-        all_predictions_linear[which(!1:nrow(data) %in% folds[[i]])] <- test_data$predict_linear
-        all_predictions_varycoef[which(!1:nrow(data) %in% folds[[i]])] <- test_data$predict_varycoef
-        all_predictions_elastic_net[which(!1:nrow(data) %in% folds[[i]])] <- test_data$predict_elastic_net
-    }
-    
-    # Calculate correlation
-    cor_linear <- cor(all_actuals, all_predictions_linear)
-    cor_varycoef <- cor(all_actuals, all_predictions_varycoef)
-    cor_elastic_net <- cor(all_actuals, all_predictions_elastic_net)
-    
-    # Calculate R-squared
-    ss_total <- sum((all_actuals - mean(all_actuals))^2)
-    ss_residual_linear <- sum((all_actuals - all_predictions_linear)^2)
-    r_squared_linear <- 1 - (ss_residual_linear / ss_total)
-    
-    ss_residual_varycoef <- sum((all_actuals - all_predictions_varycoef)^2)
-    r_squared_varycoef <- 1 - (ss_residual_varycoef / ss_total)
-    
-    ss_residual_elastic_net <- sum((all_actuals - all_predictions_elastic_net)^2)
-    r_squared_elastic_net <- 1 - (ss_residual_elastic_net / ss_total)
-    
-    list(
-        cor_linear = cor_linear,
-        cor_varycoef = cor_varycoef,
-        cor_elastic_net = cor_elastic_net,
-        r_squared_linear = r_squared_linear,
-        r_squared_varycoef = r_squared_varycoef,
-        r_squared_elastic_net = r_squared_elastic_net,
-        cor_train_linear = cor_train_linear,
-        cor_test_linear = cor_test_linear,
-        cor_train_varycoef = cor_train_varycoef,
-        cor_test_varycoef = cor_test_varycoef,
-        cor_train_elastic_net = cor_train_elastic_net,
-        cor_test_elastic_net = cor_test_elastic_net,
-        all_predictions_linear = all_predictions_linear,
-        all_predictions_varycoef = all_predictions_varycoef,
-        all_predictions_elastic_net = all_predictions_elastic_net
-    )
 }
