@@ -144,35 +144,27 @@ organise_data <- function(trait, idps, id_train, age) {
   return(list(df, df_train, df_test, age_train))
 }
 
-prepare_age_data <- function(df_train_linear, df, age_train, model_age, age) {
+
+prepare_age_data <- function(df_linear, age, model_age) {
   if (model_age == 1) {
-    df_train_linear$age <- as.vector(age_train)
-    df$age <- as.vector(age)
+    # df_train_linear$age <- as.vector(age_train)
+    df_linear$age <- as.vector(age)
   } else if (model_age == 2) {
     # keep only y (remove all IDPs)
-    df_train_linear <- df_train_linear[c("y")]
-    df <- df[c("y")]
+    # df_train_linear <- df_train_linear[c("y")]
+    df_linear <- df_linear[c("y")]
 
     # add age which will be the only predictor
-    df_train_linear$age <- as.vector(age_train)
-    df$age <- as.vector(age)
+    # df_train_linear$age <- as.vector(age_train)
+    df_linear$age <- as.vector(age)
   } else if (model_age == 3) {
     stop("Error: model_age == 3 is only appropriate with SVC.")
   }
 
-  return(list(df_train_linear = df_train_linear, df = df))
+  return(df_linear)
 }
 
-# prepare_linear_data <- function(df_train, idps, best_features, df) {
-#   df_train_linear <- df_train[, c(1, best_features + 1)]
-#   df_linear <- df[, c(1, best_features + 1)]
-#   idps_linear <- idps[, best_features]
-
-#   return(list(df_train_linear = df_train_linear, idps_linear = idps_linear, df_linear = df_linear))
-# }
-
 prepare_linear_data <- function(df, idps, best_features) {
-  # df_train_linear <- df_train[, c(1, best_features + 1)]
   df_linear <- df[, c(1, best_features + 1)]
   idps_linear <- idps[, best_features]
 
