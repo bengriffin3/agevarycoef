@@ -7,7 +7,7 @@ library(logger)
 library(glmnet)
 library(knitr)
 
-print_info <- function(trait, n_sub, perc_tn, prof, tap, cov, run_svc, n_feat=1) {
+print_info <- function(trait, n_sub, perc_tn, prof, tap, cov, run_svc, remove_age, n_feat=1) {
   print(paste0("Trait: ", trait))
   print(paste0("Number of features: ", n_feat))
   print(paste0("Number of subjects: ", n_sub))
@@ -16,6 +16,7 @@ print_info <- function(trait, n_sub, perc_tn, prof, tap, cov, run_svc, n_feat=1)
   print(paste0("Covariance tapering: ", tap))
   print(paste0("Cov func: ", cov))
   print(paste0("Run SVC: ", run_svc))
+  print(paste0("Deconfound age: ", remove_age))
 }
 
 # print_linear_accuracy_info <- function(se_lm, se_enet, corr_lm_in, corr_enet_in, corr_lm_out, corr_enet_out, id_train) {
