@@ -8,9 +8,7 @@ library(CCA)
 library(logger)
 library(glmnet)
 
-
-
-#setwd("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/")
+setwd("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/age-vary-coef/")
 data(test_data)
 
 test_that("scale_data_using_train scales correctly", {
@@ -64,58 +62,3 @@ test_that("de_mean_trait_using_train correctly demeans the trait vector", {
   # Check that the mean of the de-meaned training data is approximately 0
   #expect_true(abs(mean(demeaned_trait[id_train_randomized])) < 1e-10)
 })
-
-
-# test_that("pre_process_data_cross_validated correctly preprocess the data", {
-
-#   set.seed(42)
-#   # set up data options for full pre_process_data_cross_validated check
-#   prop_train <- 0.9 #90
-#   ica <- 1
-#   n_feat <- 5
-#   trait_id <- 999
-#   remove_age <- 0
-
-#   result <- pre_process_data_cross_validated(idps_randomized, trait_randomized, trait_id, age_randomized, conf_randomized, conf_names_randomized, prop_train, ica, n_feat, remove_age)
-#   # Unpack the results
-#   df_all_train <- result$df_all_train
-#   idps <- result$idps
-#   trait <- result$trait
-#   df_all <- result$df_all
-#   id_train <- result$id_train
-#   age <- result$age
-#   conf <- result$conf
-
-
-#   # Update the expected values for idps to match the actual values
-#   expected_idps <- matrix(c(
-#     #0.43600666, -0.9894784, -0.90391048,
-#     #0.01770737,  0.4254333, -0.14037602,
-#     #-0.09228352,  1.1677400, -0.28021882
-#     -0.60915733, -0.8987824, -0.9773448,
-#     -0.46111515, 0.4316343, -0.1560845,
-#     0.47517734, 1.1183330, -0.2470780
-#   ), nrow = 3, byrow = TRUE)
-
-#   # Test if the idps matches the updated expected values
-#   expect_equal(idps[1:3, 1:3], expected_idps, tolerance = 1e-7)
-
-#   # Manually hard-coded expected values for trait
-#   expected_trait <- c(0.2395, 0.2690, 1.2543)
-
-#   # Check if trait matches expected values
-#   expect_equal(trait[1:3], expected_trait, tolerance = 1e-3)
-
-#   # Manually hard-coded expected values for id_train
-#   expected_id_train <- c(1, 2, 3)
-
-#   # Check if id_train matches expected values
-#   expect_equal(id_train[1:3], expected_id_train)
-
-#   # Manually hard-coded expected values for age
-#   expected_age <- c(65.93970, 71.53632, 75.87305)
-
-#   # Check if age matches expected values
-#   expect_equal(age[1:3], expected_age, tolerance = 1e-7)
-
-# })
