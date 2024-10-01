@@ -10,6 +10,7 @@ library(xgboost)
 library(data.table)
 library(caret)
 library(glmnetUtils)
+library(tvem)
 library(gsubfn)
 
 
@@ -633,6 +634,7 @@ run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_i
 
     # Create the spline basis matrix for the age variable for training data
     spline_basis_train <- ns(df_spline$age[train_idx], df = spline_deg_free, intercept = TRUE)
+
     interaction_terms <- paste0("spline_basis_train * ", idp_columns, collapse = " + ")
 
     # add age as a linear features
@@ -665,6 +667,7 @@ run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_i
     # Store predictions in the original index positions
     spline_yhat[test_idx] <- spline_yhat_test
     trait_transformed[test_idx] <- trait_fold[test_idx]
+
   }
 
   # Return the fitted model, predictions, and accuracies
@@ -722,4 +725,248 @@ determine_optimal_df_spline <- function(df_spline, train_idx) {
 
   return(best_df)
 
+}
+
+# interpolate_predictions <- function(model, ages, idp_values) {
+#   # Extract the time grid and fitted coefficients from the model
+#   time_grid <- model$time_grid
+#   beta_idp <- model$grid_fitted_coefficients$idp1$estimate
+#   beta_intercept <- model$grid_fitted_coefficients$`(Intercept)`$estimate
+
+#   # Interpolate to find the coefficients for the given ages
+#   interpolated_idp <- approx(time_grid, beta_idp, xout = ages)$y
+#   interpolated_intercept <- approx(time_grid, beta_intercept, xout = ages)$y
+
+#   # Calculate the predictions
+#   predictions <- interpolated_intercept + interpolated_idp * idp_values
+
+#   return(predictions)
+# }
+
+interpolate_predictions <- function(model, ages, idp_values) {
+  # Extract the time grid and fitted coefficients from the model
+  time_grid <- model$time_grid
+  beta_idp <- model$grid_fitted_coefficients$idp1$estimate
+  beta_intercept <- model$grid_fitted_coefficients$`(Intercept)`$estimate
+
+  # Interpolate to find the coefficients for the given ages
+  interpolated_idp <- approx(time_grid, beta_idp, xout = ages, rule = 2)$y
+  interpolated_intercept <- approx(time_grid, beta_intercept, xout = ages, rule = 2)$y
+
+  # Calculate the predictions
+  predictions <- interpolated_intercept + interpolated_idp * idp_values
+
+  return(predictions)
+}
+
+
+run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
+  # We manually do the cross-validation so we can look at the predictions and compare
+  # training / test set accuracies
+  print("Fitting time-varying effects model with 10-fold cross-validation...")
+
+  # Initialize vectors to store correlations for each fold
+  corr_train <- numeric(10)
+  corr_test <- numeric(10)
+
+  # Perform 10-fold cross-validation manually to calculate correlations
+  tvem_yhat <- numeric(length(age)) # to store predictions
+  trait_transformed <- numeric(length(age)) # to store predictions
+  folds <- createFolds(age, k = 10)
+  models <- vector("list", 10)  # 10 folds, so 10 models
+
+  # Use the first fold as a reference for aligning the trait direction
+  reference_trait <- NULL
+
+  for (i in seq_along(folds)) {
+    print(paste("Fold", i))
+    test_idx <- folds[[i]]
+    train_idx <- setdiff(seq_along(age), test_idx)
+
+    preprocessed_data <- pre_process_data_cross_validated(idp, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
+    idps_fold <- preprocessed_data$idps
+    trait_fold <- preprocessed_data$trait
+    age_fold <- preprocessed_data$age
+
+    # Use the first fold's trait direction as the reference
+    if (is.null(reference_trait)) {
+      reference_trait <- trait_fold
+    } else {
+      # Align current fold's trait direction with the reference trait direction
+      if (cor(trait_fold, reference_trait) < 0) {
+        trait_fold <- -trait_fold
+      }
+    }
+
+    # Generate subject IDs based on the number of subjects in the fold
+    subject_id <- seq_along(trait_fold)
+
+    # Create dataframe with subject_id included
+    df <- data.frame(subject_id = subject_id, y = trait_fold, idps_fold)
+    df <- prepare_age_data(df, age_fold, 1)
+
+    # # Train the model on the training fold (and save model info)
+    if (model_age == 0) {
+      fit_tvem <- tvem::select_tvem(data = df[train_idx, ],
+                     formula = y ~ idps_fold,
+                     id = subject_id, # Assuming subject_id is available
+                     time = age,
+                     grid = length(trait_fold),
+                     max_knots = 5)
+    } else if (model_age == 1) {
+      fit_tvem <- tvem::select_tvem(data = df[train_idx, ],
+                     formula = y ~ idps_fold,
+                     #invar_effect = ~age,
+                     id = subject_id, # Assuming subject_id is available
+                     time = age,
+                     #num_knots = 1,
+                     spline_order = 3,
+                     grid = length(trait_fold),
+                     max_knots = 1)
+    }
+
+    models[[i]] <- fit_tvem
+
+    # Predictions for the training and test set
+    tvem_yhat_train <- interpolate_predictions(fit_tvem, df$age[train_idx], df$idps_fold[train_idx])
+    tvem_yhat_test <- interpolate_predictions(fit_tvem, df$age[test_idx], df$idps_fold[test_idx])
+
+    # Note train/test accuracies
+    corr_train[i] <- cor(df$y[train_idx], tvem_yhat_train)
+    corr_test[i] <- cor(df$y[test_idx], tvem_yhat_test)
+
+    print(paste("corr fold (train):", corr_train[i]))
+    print(paste("corr fold (test):", corr_test[i]))
+
+    # Store predictions in the original index positions
+    tvem_yhat[test_idx] <- tvem_yhat_test
+    trait_transformed[test_idx] <- trait_fold[test_idx]
+  }
+
+  # Return the fitted model, predictions, and accuracies
+  return(list(
+    tvem_yhat = tvem_yhat,
+    corr_train = corr_train,
+    corr_test = corr_test,
+    models = models,
+    trait_transformed = trait_transformed
+  ))
+}
+
+# run_tvem <- function(the_data) {
+#   print("test_a")
+#   print(head(the_data))
+
+#   names(the_data)[names(the_data) == "idps_fold"] <- "x1"
+#   names(the_data)[names(the_data) == "age"] <- "time"
+
+#   print(head(the_data))
+
+#   fit_tvem <- tvem::select_tvem(formula = x1~1,
+#                      id = the_data$subject_id,
+#                      time = the_data$age,
+#                      max_knots = 5)
+#   print("test_b")
+#   return(fit_tvem)
+# }
+
+run_tvem_model_cv_2 <- function(idp, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
+  print("Fitting time-varying effects model with 10-fold cross-validation...")
+
+  # Initialize vectors to store correlations for each fold
+  corr_train <- numeric(10)
+  corr_test <- numeric(10)
+
+  # Perform 10-fold cross-validation manually to calculate correlations
+  tvem_yhat <- numeric(length(age)) # to store predictions
+  trait_transformed <- numeric(length(age)) # to store predictions
+  folds <- createFolds(age, k = 10)
+  models <- vector("list", 10)  # 10 folds, so 10 models
+
+  # Use the first fold as a reference for aligning the trait direction
+  reference_trait <- NULL
+
+  for (i in seq_along(folds)) {
+    print(paste("Fold", i))
+    test_idx <- folds[[i]]
+    train_idx <- setdiff(seq_along(age), test_idx)
+
+    preprocessed_data <- pre_process_data_cross_validated(idp, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
+    idps_fold <- preprocessed_data$idps
+    trait_fold <- preprocessed_data$trait
+    age_fold <- preprocessed_data$age
+
+    # Use the first fold's trait direction as the reference
+    if (is.null(reference_trait)) {
+      reference_trait <- trait_fold
+    } else {
+      if (cor(trait_fold, reference_trait) < 0) {
+        trait_fold <- -trait_fold
+      }
+    }
+
+    # Generate subject IDs based on the number of subjects in the fold
+    subject_id <- seq_along(trait_fold)
+
+    # Create dataframe with subject_id included
+    df <- data.frame(subject_id = subject_id, y = trait_fold, idps_fold)
+    df <- prepare_age_data(df, age_fold, 1)
+
+    df_train <- df[train_idx, ]
+
+    print(head(df_train))
+
+    # Train the model on the training fold (and save model info)
+    if (model_age == 0) {
+      print("test")
+      fit_tvem <- run_tvem(df_train)
+      # fit_tvem <- tvem::select_tvem(data = df_train,
+      #                formula = y ~ idps_fold,
+      #                id = subject_id,
+      #                time = age)
+      print("test2")
+                     #grid = length(trait_fold),
+                     #max_knots = 5)
+      # fit_tvem <- tvem::tvem(data = df_train,
+      #                formula = y ~ idps_fold,
+      #                id = subject_id,
+      #                time = age,
+      #                grid = length(trait_fold),
+      #                num_knots = 1)
+    } else if (model_age == 1) {
+      fit_tvem <- tvem::select_tvem(data = df_train,
+                     formula = y ~ idps_fold,
+                     id = subject_id,
+                     time = age,
+                     spline_order = 3,
+                     grid = length(trait_fold),
+                     max_knots = 1)
+    }
+
+    models[[i]] <- fit_tvem
+
+    # Predictions for the training and test set
+    tvem_yhat_train <- interpolate_predictions(fit_tvem, df$age[train_idx], df$idps_fold[train_idx])
+    tvem_yhat_test <- interpolate_predictions(fit_tvem, df$age[test_idx], df$idps_fold[test_idx])
+
+    # Note train/test accuracies
+    corr_train[i] <- cor(df$y[train_idx], tvem_yhat_train)
+    corr_test[i] <- cor(df$y[test_idx], tvem_yhat_test)
+
+    print(paste("corr fold (train):", corr_train[i]))
+    print(paste("corr fold (test):", corr_test[i]))
+
+    # Store predictions in the original index positions
+    tvem_yhat[test_idx] <- tvem_yhat_test
+    trait_transformed[test_idx] <- trait_fold[test_idx]
+  }
+
+  # Return the fitted model, predictions, and accuracies
+  return(list(
+    tvem_yhat = tvem_yhat,
+    corr_train = corr_train,
+    corr_test = corr_test,
+    models = models,
+    trait_transformed = trait_transformed
+  ))
 }

@@ -25,4 +25,5 @@ Imports:
     stats,
     stringr,
     varycoef,
-    xgboost
+    xgboost,
+    tvem

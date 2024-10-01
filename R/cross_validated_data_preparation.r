@@ -616,3 +616,5 @@ remove_confounds_by_name <- function(conf, conf_names, name_substring) {
   conf <- conf[, idx_to_keep]
   return(conf)
 }
+
+
