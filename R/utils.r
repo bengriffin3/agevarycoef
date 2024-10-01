@@ -1,10 +1,4 @@
 library(R.matlab)
-library(varycoef)
-library(optparse)
-library(fastICA)
-library(CCA)
-library(logger)
-library(glmnet)
 
 save_training_data <- function (proj_dir, trait_id, n_feat, n_sub, perc_train, ica, df_train, age_train, id_train) {
 

@@ -89,52 +89,6 @@ run_linear_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
   ))
 }
 
-
-# run_linear_model_cv <- function(df) {
-#   # We manually do the cross-validation so we can look at the predictions and compare
-#   # training / test set accuracies
-#   print("Fitting linear model with 10-fold cross-validation...")
-
-#   # Initialize vectors to store correlations for each fold
-#   corr_train <- numeric(10)
-#   corr_test <- numeric(10)
-
-#   # Perform 10-fold cross-validation manually to calculate correlations
-#   lm_yhat <- numeric(length(df$y)) # to store predictions
-#   folds <- createFolds(df$y, k = 10)
-#   models <- vector("list", 10)  # 10 folds, so 10 models
-
-#   for (i in seq_along(folds)) {
-#     print(paste("Fold", i))
-#     test_idx <- folds[[i]]
-#     train_idx <- setdiff(seq_along(df$y), test_idx)
-
-#     # list[df_all_train, idps_all, trait, df_all, id_train, age, conf, cca_object_idps_trait, ica_object_idps] <- pre_process_data_cross_validated(idps_all, trait, trait_id, age, conf, conf_names, prop_train, ica, 0, remove_age)
-
-#     # Train the model on the training fold (and save model info)
-#     fit_lm <- lm(y ~ ., data = df[train_idx, ])
-#     models[[i]] <- fit_lm
-
-#     # Predictions for the training and test set
-#     lm_yhat_train <- predict(fit_lm, newdata = df[train_idx, ])
-#     lm_yhat_test <- predict(fit_lm, newdata = df[test_idx, ])
-
-#     # Note train/test accuracies
-#     corr_train[i] <- cor(df$y[train_idx], lm_yhat_train)
-#     corr_test[i] <- cor(df$y[test_idx], lm_yhat_test)
-
-#     # Store predictions in the original index positions
-#     lm_yhat[test_idx] <- lm_yhat_test
-#   }
-
-#   # Return the fitted model, predictions, and accuracies
-#   return(list(
-#     lm_yhat = lm_yhat,
-#     corr_train = corr_train,
-#     corr_test = corr_test,
-#     models = models
-#   ))
-# }
 # Function to calculate performance metrics
 calculate_metrics <- function(actual_train, predicted_train, actual_test, predicted_test) {
   # Initialize results list
@@ -727,22 +681,6 @@ determine_optimal_df_spline <- function(df_spline, train_idx) {
 
 }
 
-# interpolate_predictions <- function(model, ages, idp_values) {
-#   # Extract the time grid and fitted coefficients from the model
-#   time_grid <- model$time_grid
-#   beta_idp <- model$grid_fitted_coefficients$idp1$estimate
-#   beta_intercept <- model$grid_fitted_coefficients$`(Intercept)`$estimate
-
-#   # Interpolate to find the coefficients for the given ages
-#   interpolated_idp <- approx(time_grid, beta_idp, xout = ages)$y
-#   interpolated_intercept <- approx(time_grid, beta_intercept, xout = ages)$y
-
-#   # Calculate the predictions
-#   predictions <- interpolated_intercept + interpolated_idp * idp_values
-
-#   return(predictions)
-# }
-
 interpolate_predictions <- function(model, ages, idp_values) {
   # Extract the time grid and fitted coefficients from the model
   time_grid <- model$time_grid
@@ -852,23 +790,6 @@ run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remov
     trait_transformed = trait_transformed
   ))
 }
-
-# run_tvem <- function(the_data) {
-#   print("test_a")
-#   print(head(the_data))
-
-#   names(the_data)[names(the_data) == "idps_fold"] <- "x1"
-#   names(the_data)[names(the_data) == "age"] <- "time"
-
-#   print(head(the_data))
-
-#   fit_tvem <- tvem::select_tvem(formula = x1~1,
-#                      id = the_data$subject_id,
-#                      time = the_data$age,
-#                      max_knots = 5)
-#   print("test_b")
-#   return(fit_tvem)
-# }
 
 run_tvem_model_cv_2 <- function(idp, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   print("Fitting time-varying effects model with 10-fold cross-validation...")

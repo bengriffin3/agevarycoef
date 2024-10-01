@@ -1,11 +1,6 @@
 library(R.matlab)
-library(varycoef)
-library(optparse)
-library(fastICA)
-library(CCA)
-library(logger)
-library(glmnet)
 library(gsubfn)
+library(logger)
 
 load_prediction_variables <- function(n_subjects, proj_dir) {
   # Load the mat file
@@ -109,8 +104,6 @@ perform_pca <- function(idps, n_feat) {
   return(idps)
 }
 
-
-
 deconfoundPhen <- function(data, conf, beta = NULL, my = NULL) {
   if (is.null(beta)) {
     # De-mean the response
@@ -212,34 +205,6 @@ unpack_data <- function(proj_dir, data, trait_id, n_sub) {
   return(list(idps, age, trait, conf, conf_names))
 }
 
-# bootstrap_pca <- function(cognitive_traits, idx_trait_keep, idps) {
-
-#   n_keep <- length(idx_trait_keep)
-
-#   # randomly selected 30 traits (with replacement)
-#   y <- cognitive_traits[, idx_trait_keep + 1] # + 1 for python indexing
-#   idx_bootstrap <- sort(sample(seq_len(n_keep), n_keep))
-#   y <- y[, idx_bootstrap]
-
-#   # scale y
-#   y <- scale(y)
-
-#   # remove subjects with NaNs
-#   subject_keep <- !apply(is.na(y), 1, any)
-#   y <- y[subject_keep, ] # remove rows where any NaNs
-
-#   # perform PCA
-#   pca <- prcomp(y, scale. = TRUE, center = TRUE)
-#   principal_components <- pca$x
-#   y <- principal_components[, 1] # take the first PC
-
-#   x <- idps[subject_keep, ]
-
-#   my_list <- list(x, y, subject_keep)
-
-#   return(my_list)
-# }
-
 
 get_x_pcs <- function(x, n_pc_comp) {
   # perform PCA including de-meaning and setting unit variance
@@ -249,17 +214,6 @@ get_x_pcs <- function(x, n_pc_comp) {
   x_pca <- pca_result_x$x[, 1:n_pc_comp]
   return(x_pca)
 }
-
-# de_mean_trait <- function(trait) {
-#   if (length(dim(trait)) == 1) {
-#     my <- mean(trait)
-#     trait <- trait - my
-#   } else if (length(dim(trait)) == 2) {
-#     my <- colMeans(trait)
-#     trait <- trait - rep(my, rep.int(nrow(trait), ncol(trait)))
-#   }
-#   return(trait)
-# }
 
 
 add_idp_age_interaction_term <- function(df_all, age) {
@@ -289,8 +243,6 @@ perform_pca_after_feature_engineering <- function(df_all) {
 
   return(df_all)
 }
-
-
 
 prepare_boost_data <- function(df, id_train, trait_all, age_all, model_age, n_feat, best_features=0) {
 
@@ -342,7 +294,6 @@ prepare_boost_data <- function(df, id_train, trait_all, age_all, model_age, n_fe
   return(list(df_train_x, df_train_y, df_test_x, df_test_y))
 }
 
-
 determine_best_boost_features <- function(df_all, id_train, n_feat, model_age) {
 
   best_features <- 0
@@ -353,8 +304,6 @@ determine_best_boost_features <- function(df_all, id_train, n_feat, model_age) {
 
     #best_features <- get_best_boost_features(df_al, id_train, n_feat)
   }
-
-
 
   return(best_features)
 }
