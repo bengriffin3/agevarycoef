@@ -13,7 +13,6 @@ pre_process_data_cross_validated <- function(idps, trait, age, conf, conf_names,
   idps <- scale_data_using_train(idps, train_idx)
   age <- scale_data_using_train(age, train_idx)
 
-
   cca_object_idps_trait <- 0
   ica_object_idps <- 0
 
