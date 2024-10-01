@@ -1,10 +1,8 @@
 library(R.matlab)
-library(varycoef)
 library(optparse)
 library(fastICA)
 library(CCA)
 library(logger)
-library(glmnet)
 library(gsubfn)
 
 pre_process_data_cross_validated <- function(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age=0, ica=0, n_feat=0) {

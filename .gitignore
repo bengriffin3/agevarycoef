@@ -1,10 +1,17 @@
+# Ignore RStudio project user data
 .Rproj.user
+
+# Ignore temporary files
 .Rhistory
 .Rdata
+
+
 .httr-oauth
 .DS_Store
 .quarto
 #data/
+LICENSE
+README.md
 
 R/deprecated_functions.r
 
