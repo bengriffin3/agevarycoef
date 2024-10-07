@@ -1,10 +1,10 @@
 Package: agevarycoef
-Title: What the Package Does (One Line, Title Case)
+Title: Age-Varying Coefficient Models for Predicting Cognition from Neuroimaging Data
 Version: 0.0.0.9000
 Authors@R: 
     person("Ben", "Griffin", , "ben.griffin@keble.ox.ac.uk", role = c("aut", "cre"),
            comment = c(ORCID = "0009-0000-7310-6074"))
-Description: What the package does (one paragraph).
+Description: Implements age-varying coefficient models to predict cognitive traits using structural IDPs from the UK Biobank. Provides tools for data preparation, cross-validation, and prediction, with methods for handling missing data and age-dependent relationships between brain structure and cognition.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -26,4 +26,5 @@ Imports:
     stringr,
     varycoef,
     xgboost,
-    tvem
+    tvem,
+    gsubfn
