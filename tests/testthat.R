@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(agevarycoef)
+library(age-vary-coef)
 
-test_check("agevarycoef")
+test_check("age-vary-coef")
