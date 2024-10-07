@@ -27,10 +27,10 @@ jobs:
         with:
           extra-packages: any::covr, any::xml2
 
-      # Install gsubfn and caret dependencies
+      # Install missing dependencies
       - name: Install missing dependencies
         run: |
-          install.packages(c('gsubfn', 'caret'), repos = 'https://cloud.r-project.org')
+          install.packages(c('gsubfn', 'caret', 'glmnetUtils'), repos = 'https://cloud.r-project.org')
         shell: Rscript {0}
 
       - name: Test coverage
