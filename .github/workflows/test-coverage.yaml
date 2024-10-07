@@ -27,6 +27,12 @@ jobs:
         with:
           extra-packages: any::covr, any::xml2
 
+      # Install gsubfn and any other additional dependencies
+      - name: Install missing dependencies
+        run: |
+          install.packages('gsubfn', repos = 'https://cloud.r-project.org')
+        shell: Rscript {0}
+
       - name: Test coverage
         run: |
           cov <- covr::package_coverage(
@@ -50,3 +56,4 @@ jobs:
         with:
           name: coverage-test-failures
           path: ${{ runner.temp }}/package
+
