@@ -8,7 +8,6 @@ library(CCA)
 library(logger)
 library(glmnet)
 
-setwd("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/age-vary-coef/")
 data(test_data)
 
 test_that("scale_data_using_train scales correctly", {
