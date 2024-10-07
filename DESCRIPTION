@@ -17,6 +17,7 @@ Imports:
     data.table,
     fastICA,
     glmnet,
+    gsubfn,
     knitr,
     lightgbm,
     logger,
@@ -26,5 +27,4 @@ Imports:
     stringr,
     varycoef,
     xgboost,
-    tvem,
-    gsubfn
+    tvem
