@@ -50,6 +50,9 @@ jobs:
           find '${{ runner.temp }}/package' -name 'testthat.Rout*' -exec cat '{}' \; || true
         shell: bash
 
+      - name: List files in the R directory
+        run: ls -R R
+
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v4
