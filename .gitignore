@@ -11,7 +11,7 @@
 .quarto
 #data/
 LICENSE
-README.md
+#README.md
 
 R/deprecated_functions.r
 
