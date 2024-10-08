@@ -12,6 +12,8 @@
 #data/
 LICENSE
 #README.md
+README.Rmd
+
 
 R/deprecated_functions.r
 
