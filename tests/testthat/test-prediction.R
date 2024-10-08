@@ -6,19 +6,16 @@ library(glmnet)
 library(agevarycoef)
 library(here)
 
-source(here::here("R", "data_preparation.r"))
-source(here::here("R", "prediction.r"))
 
-# load('/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/data/test_data.rda')
-# load('/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/data/test_data_pred.rda')
-
-load('data/test_data.rda')
-load('test_data_pred.rda')
-
-n_feat <- 5
-model_age <- 1
 
 test_that("elastic net predictions run correctly", {
+
+  message("Current working directory: ", getwd())
+  source(here::here("R", "data_preparation.r"))
+  source(here::here("R", "prediction.r"))
+  load('data/test_data.rda')
+  load('test_data_pred.rda')
+  model_age <- 1
   set.seed(42)
   # determine best features (linear)
   n_feat <- 5

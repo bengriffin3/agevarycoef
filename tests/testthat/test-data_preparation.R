@@ -1,8 +1,8 @@
 # Test for remove_nan_sub function
 library(testthat)
 library(agevarycoef)
+source(here::here("R", "data_preparation.r"))
 
-source("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/R/data_preparation.r")
 
 # Example data for testing
 idps <- matrix(1:12, nrow = 4, ncol = 3)  # 4 subjects, 3 IDPs
