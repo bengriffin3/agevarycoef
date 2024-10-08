@@ -1,8 +1,5 @@
 # agevarycoef
 
-<!-- badges: start -->
-[![R-CMD-check](https://github.com/bengriffin3/agevarycoef/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bengriffin3/agevarycoef/actions/workflows/R-CMD-check.yaml)
-<!-- badges: end -->
 
 `agevarycoef` is an R package that models time-varying coefficients in a variety of contexts, specifically designed for age-varying coefficients. This package allows you to fit models where the relationship between covariates and outcomes changes smoothly with age.
 
