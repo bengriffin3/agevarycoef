@@ -5,6 +5,10 @@ library(varycoef)
 library(glmnet)
 library(agevarycoef)
 
+
+setwd("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef")
+
+
 source("R/prediction.r")
 source("R/data_preparation.r")
 
