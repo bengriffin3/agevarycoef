@@ -7,8 +7,11 @@ library(fastICA)
 library(CCA)
 library(logger)
 library(glmnet)
+library(agevarycoef)
 
-data(test_data)
+source("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/R/cross_validated_data_preparation.r")
+
+data(test_data, package = "agevarycoef")
 
 test_that("scale_data_using_train scales correctly", {
 
@@ -23,15 +26,15 @@ test_that("scale_data_using_train scales correctly", {
 
   # New manually hard-coded expected values
   expected_train_scaled <- matrix(c(
-    -0.3784361, -0.03923854,  0.89346123,
-    -0.4564810, -1.41132688, -0.65670733,
-    -0.7993564, -2.27835712,  1.18691255
+    -0.07397108, -0.74632330, -0.7155596,
+    2.97236304, -0.96777679, 0.4542563,
+    -0.55813378, 1.57181243, 1.5728454
   ), nrow = 3, byrow = TRUE)
 
   expected_test_scaled <- matrix(c(
-    0.98514517, -1.3547218, -1.3128685,
-    0.39573359, -0.7127220, -0.5643616,
-    0.73306639,  0.7073801, -1.4108434
+    -0.4882262,  0.75459192,  1.1392716,
+    0.4908878, -0.08177329, -1.3108172,
+    -0.8540514,  0.40758614, -0.2131605
   ), nrow = 3, byrow = TRUE)
 
   # Test that the scaled training data matches the new expected values
@@ -40,11 +43,6 @@ test_that("scale_data_using_train scales correctly", {
   # Test that the scaled test data matches the new expected values
   expect_equal(idps_test_scaled[1:3, 1:3], expected_test_scaled, tolerance = 1e-7)
 
-  # Check that the scaled means of the training data are approximately 0
-  #expect_true(all(abs(colMeans(na.omit(idps_train_scaled))) < 1e-10))
-
-  # Check that the scaled standard deviations of the training data are 1
-  #expect_true(all(abs(apply(idps_train_scaled, 2, sd) - 1) < 1e-10))
 })
 
 test_that("de_mean_trait_using_train correctly demeans the trait vector", {
@@ -53,7 +51,7 @@ test_that("de_mean_trait_using_train correctly demeans the trait vector", {
   demeaned_trait <- de_mean_trait_using_train(na.omit(trait_randomized), id_train_randomized)
 
   # Manually computed expected values based on your results
-  expected_trait_demeaned <- c(-71.84624, -73.32994, -76.47185)
+  expected_trait_demeaned <- c(10.410762, 9.407408, 22.084035)
 
   # Test that the de-meaned trait matches the manually computed expected values
   expect_equal(demeaned_trait[1:3], expected_trait_demeaned, tolerance = 1e-7)

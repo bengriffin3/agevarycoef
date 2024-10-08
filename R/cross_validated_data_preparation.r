@@ -5,6 +5,32 @@ library(CCA)
 library(logger)
 library(gsubfn)
 
+#' Pre-process Data for Cross-Validated Model
+#'
+#' This function pre-processes imaging-derived phenotypes (IDPs), trait, and confound variables 
+#' for use in cross-validated models. It includes scaling, deconfounding, and optionally performing 
+#' canonical correlation analysis (CCA) or independent component analysis (ICA).
+#'
+#' @param idps A matrix or data frame of imaging-derived phenotypes (IDPs).
+#' @param trait A numeric vector representing the trait (target) variable.
+#' @param age A numeric vector representing age.
+#' @param conf A matrix or data frame of confounding variables.
+#' @param conf_names A character vector of confounder names.
+#' @param trait_id A numeric identifier for the trait type; 999 indicates CCA, 0 indicates PCA.
+#' @param train_idx A numeric vector indicating the indices of the training data.
+#' @param remove_age A binary flag (0 or 1) indicating whether to remove age (i.e., treat it as a confound). Default is 0.
+#' @param ica A numeric value indicating whether to perform ICA. Default is 0.
+#' @param n_feat A numeric value specifying the number of features to retain (if using ICA or PCA). Default is 0.
+#' 
+#' @return A list containing:
+#' \item{idps}{Processed IDPs matrix.}
+#' \item{trait}{Processed trait vector.}
+#' \item{age}{Scaled age vector.}
+#' @export
+#'
+#' @examples
+#' preprocessed_data <- pre_process_data_cross_validated(idps, trait, age, conf, conf_names, trait_id, train_idx)
+
 pre_process_data_cross_validated <- function(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age=0, ica=0, n_feat=0) {
 
   # scale idps (and age) using training data

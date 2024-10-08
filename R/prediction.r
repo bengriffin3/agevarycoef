@@ -13,7 +13,23 @@ library(glmnetUtils)
 library(tvem)
 library(gsubfn)
 
-
+#' Run Linear Model on Train and Test Data
+#'
+#' This function fits a linear model on the training data and uses it to predict 
+#' outcomes for both the training and test data. The predictions are returned alongside 
+#' the fitted linear model object.
+#'
+#' @param df_linear A data frame containing the dependent variable `y` and the independent variables (features).
+#' @param id_train A numeric vector indicating the indices of the training data within the data frame.
+#'
+#' @return A list containing:
+#' \item{fit_lm}{The fitted linear model object.}
+#' \item{lm_yhat}{A numeric vector of predictions for both training and test data.}
+#' @export
+#'
+#' @examples
+#' result <- run_linear_model(df_linear, id_train)
+#' print(result$fit_lm)
 run_linear_model <- function(df_linear, id_train) {
 
   df_train <- df_linear[id_train, ]
@@ -33,6 +49,32 @@ run_linear_model <- function(df_linear, id_train) {
 }
 
 
+#' Run Linear Model with 10-Fold Cross-Validation
+#'
+#' This function fits a linear model using 10-fold cross-validation. It returns 
+#' predictions, correlations for both training and test sets, and the fitted models 
+#' for each fold.
+#'
+#' @param idps A matrix or data frame of imaging-derived phenotypes (IDPs).
+#' @param trait A numeric vector representing the trait (target) variable.
+#' @param age A numeric vector representing age.
+#' @param conf A matrix or data frame of confounding variables.
+#' @param conf_names A character vector of confounder names.
+#' @param trait_id A numeric identifier for the trait type; 999 indicates CCA, 0 indicates PCA.
+#' @param remove_age A binary flag (0 or 1) indicating whether to remove age from confounding variables.
+#' @param model_age A binary flag indicating whether to include age in the model.
+#'
+#' @return A list containing:
+#' \item{lm_yhat}{A numeric vector of predictions for each fold (test set).}
+#' \item{corr_train}{A numeric vector of correlations between true and predicted values on the training set for each fold.}
+#' \item{corr_test}{A numeric vector of correlations between true and predicted values on the test set for each fold.}
+#' \item{models}{A list of fitted linear models for each fold.}
+#' \item{trait_transformed}{A numeric vector of the transformed trait used for prediction.}
+#' @export
+#'
+#' @examples
+#' result <- run_linear_model_cv(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age)
+#' print(result$corr_train)
 run_linear_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
   # training / test set accuracies
@@ -109,7 +151,23 @@ calculate_metrics <- function(actual_train, predicted_train, actual_test, predic
   return(metrics)
 }
 
-
+#' Run Elastic Net Model
+#'
+#' Fits an Elastic Net model with or without age as a covariate and returns the fitted model
+#' and predicted values for both training and test sets.
+#'
+#' @param idps_linear A matrix of IDP (input data) features.
+#' @param trait A vector of target variable (traits) to predict.
+#' @param id_train Indices of training data.
+#' @param age A vector of ages corresponding to the observations.
+#' @param model_age Integer to specify how age is treated in the model:
+#' 0 = No age, 1 = Age as a covariate, 2 = Age only, 3 = IDPs + Age.
+#'
+#' @return A list containing:
+#' \item{cvfit_glmnet}{The fitted Elastic Net model.}
+#' \item{yhat_train}{Predictions for the training data.}
+#' \item{yhat_test}{Predictions for the test data.}
+#' @export
 run_elastic_net_model <- function(idps_linear, trait, id_train, age, model_age) {
 
   print("Fitting elastic net model...")
@@ -152,7 +210,30 @@ run_elastic_net_model <- function(idps_linear, trait, id_train, age, model_age) 
 
 }
 
-
+#' Run Elastic Net Model with Cross-Validation
+#'
+#' Performs k-fold cross-validation using Elastic Net, predicting the trait from IDP data
+#' with optional inclusion of age as a covariate.
+#'
+#' @param idps A matrix of IDP (input data) features.
+#' @param trait A vector of target variable (traits) to predict.
+#' @param age A vector of ages corresponding to the observations.
+#' @param conf A matrix of confounding variables to be removed (optional).
+#' @param conf_names Column names for the confound matrix.
+#' @param trait_id Trait identifier used in pre-processing.
+#' @param remove_age Logical, whether to remove age effect during pre-processing.
+#' @param model_age Integer to specify how age is treated in the model:
+#' 0 = No age, 1 = Age as a covariate, 2 = Age only, 3 = IDPs + Age.
+#' @param alpha Elastic net mixing parameter (0 = ridge, 1 = lasso).
+#' @param n_folds Number of cross-validation folds.
+#'
+#' @return A list containing:
+#' \item{yhat}{Predicted values for all samples across the test folds.}
+#' \item{corr_train}{Training set correlations for each fold.}
+#' \item{corr_test}{Test set correlations for each fold.}
+#' \item{models}{List of fitted Elastic Net models for each fold.}
+#' \item{trait_transformed}{Transformed trait used during cross-validation.}
+#' @export
 run_elastic_net_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age, alpha = 1, n_folds = 10) {
   print("Fitting elastic net model with cross-validation...")
 
@@ -258,6 +339,21 @@ extract_best_features <- function(corr, n) {
 }
 
 
+#' Run LightGBM Model
+#'
+#' Fits a LightGBM model on training data and evaluates it on test data.
+#'
+#' @param df_all_train_x Training data matrix (features).
+#' @param df_all_train_y Training data vector (target).
+#' @param df_all_test_x Test data matrix (features).
+#' @param df_all_test_y Test data vector (target).
+#' @param params List of LightGBM parameters (optional).
+#'
+#' @return A list containing:
+#' \item{predictions_train}{Predicted values for the training data.}
+#' \item{predictions_test}{Predicted values for the test data.}
+#' \item{lgb_model}{The trained LightGBM model.}
+#' @export
 run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y, params = 0) {
 
   train_lgb <- lgb.Dataset(data = df_all_train_x, label = df_all_train_y)
@@ -298,9 +394,27 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
  }
 
 
- run_lgboost_model_cv <- function(df_boost, params = NULL, n_folds = 10) {
+#' Run LightGBM with Cross-Validation
+#'
+#' Performs k-fold cross-validation using LightGBM, fitting the model on the training data
+#' and evaluating it on the test data.
+#'
+#' @param df_boost A data frame containing features and target variable ("y").
+#' @param params A list of LightGBM parameters (optional).
+#' @param n_folds Number of cross-validation folds.
+#'
+#' @return A list containing:
+#' \item{predictions_test}{Predicted values for all samples across the test folds.}
+#' \item{corr_train}{Training set correlations for each fold.}
+#' \item{corr_test}{Test set correlations for each fold.}
+#' \item{mse_train}{Mean squared error on the training set for each fold.}
+#' \item{mse_test}{Mean squared error on the test set for each fold.}
+#' \item{r_squared_train}{R-squared values for the training set for each fold.}
+#' \item{r_squared_test}{R-squared values for the test set for each fold.}
+#' @export
+run_lgboost_model_cv <- function(df_boost, params = NULL, n_folds = 10) {
   print("Running LGBoost with cross-validation...")
-  
+
   # Prepare vectors to store metrics for each fold
   corr_train <- numeric(n_folds)
   corr_test <- numeric(n_folds)
@@ -308,13 +422,13 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
   mse_test <- numeric(n_folds)
   r_squared_train <- numeric(n_folds)
   r_squared_test <- numeric(n_folds)
-  
+
   # Initialize a matrix to store predictions
   predictions_test_all <- numeric(nrow(df_boost))
-  
+
   # Generate fold indices
   folds <- createFolds(df_boost$y, k = n_folds)
-  
+
   # Default LightGBM parameters if none are provided
   if (is.null(params)) {
     params <- list(
@@ -422,6 +536,24 @@ get_cv_model_stats <- function(yhat, trait) {
   return(list(corr = corr, mse = mse, r_squared = r_squared))
 }
 
+#' Run XGBoost Model
+#'
+#' Trains an XGBoost model using the provided training data and tests the model on the provided test data.
+#'
+#' @param df_all_train_x A matrix or data frame containing the training data features.
+#' @param df_all_train_y A vector containing the training data labels.
+#' @param df_all_test_x A matrix or data frame containing the test data features.
+#' @param df_all_test_y A vector containing the test data labels.
+#'
+#' @return A list containing:
+#'   - predictions_train: Predicted values for the training data.
+#'   - predictions_test: Predicted values for the test data.
+#'   - xgb_model: The fitted XGBoost model object.
+#'
+#' @examples
+#' result <- run_xgboost_model(train_x, train_y, test_x, test_y)
+#' predictions <- result$predictions_test
+#' @export
 run_xgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y) {
 
   dtrain <- xgb.DMatrix(data = df_all_train_x, label = df_all_train_y)
@@ -483,7 +615,29 @@ return(list(corr_train=corr_train, corr_test=corr_test, mse_train=mse_train, mse
 
 }
 
-
+#' Run Spline Model with 10-fold Cross-Validation
+#'
+#' Fits a spline model using 10-fold cross-validation and calculates correlations for both training and test sets.
+#'
+#' @param idps A matrix or data frame of input features (IDPs).
+#' @param trait A vector of the trait to predict.
+#' @param age A vector of subject ages.
+#' @param conf A data frame of additional confounding variables.
+#' @param conf_names A character vector of confound variable names.
+#' @param trait_id An integer representing the trait ID.
+#' @param remove_age A boolean indicating whether to remove the age variable from the model.
+#' @param model_age A boolean indicating whether to include age as a linear feature in the model.
+#'
+#' @return A list containing:
+#'   - spline_yhat: Predicted trait values for the test data.
+#'   - corr_train: Correlations for the training folds.
+#'   - corr_test: Correlations for the test folds.
+#'   - models: List of fitted models for each fold.
+#'
+#' @examples
+#' result <- run_spline_model_cv(idps, trait, age, conf, conf_names, trait_id, TRUE, TRUE)
+#' test_predictions <- result$spline_yhat
+#' @export
 run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
   # training / test set accuracies
@@ -548,6 +702,31 @@ run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
   ))
 }
 
+
+#' Run Spline Model with Elastic Net Regularization (10-fold Cross-Validation)
+#'
+#' Fits a spline model with elastic net regularization using 10-fold cross-validation and calculates correlations for both training and test sets.
+#'
+#' @param idps A matrix or data frame of input features (IDPs).
+#' @param trait A vector of the trait to predict.
+#' @param age A vector of subject ages.
+#' @param conf A data frame of additional confounding variables.
+#' @param conf_names A character vector of confound variable names.
+#' @param trait_id An integer representing the trait ID.
+#' @param remove_age A boolean indicating whether to remove the age variable from the model.
+#' @param model_age A boolean indicating whether to include age as a linear feature in the model.
+#'
+#' @return A list containing:
+#'   - spline_yhat: Predicted trait values for the test data.
+#'   - corr_train_cv: Correlations for the training folds.
+#'   - corr_test_cv: Correlations for the test folds.
+#'   - models: List of fitted models for each fold.
+#'   - trait_transformed: Transformed trait values for the test data.
+#'
+#' @examples
+#' result <- run_spline_model_cv_enet(idps, trait, age, conf, conf_names, trait_id, TRUE, TRUE)
+#' test_predictions <- result$spline_yhat
+#' @export
 run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   print("Fitting spline model with 10-fold cross-validation...")
 
@@ -697,7 +876,35 @@ interpolate_predictions <- function(model, ages, idp_values) {
   return(predictions)
 }
 
-
+#' Run 10-Fold Cross-Validation for Time-Varying Effects Model (TVEM)
+#'
+#' This function performs a 10-fold cross-validation to fit a time-varying effects model
+#' (TVEM) and predict a given trait using IDP (imaging-derived phenotypes) and age. 
+#' It supports optional confounder adjustment, alignment of trait directions across folds,
+#' and provides both training and test set correlations.
+#'
+#' @param idp A matrix or dataframe of imaging-derived phenotypes (IDPs).
+#' @param trait A numeric vector representing the trait to be predicted.
+#' @param age A numeric vector representing the age of the subjects.
+#' @param conf A matrix or dataframe of confounding variables to adjust for (optional).
+#' @param conf_names A vector of strings with the names of confounding variables (optional).
+#' @param trait_id An identifier for the trait being modeled.
+#' @param remove_age Logical; if TRUE, removes age from the set of predictors.
+#' @param model_age Logical; if TRUE, includes age as a linear effect in the model.
+#'
+#' @return A list containing the following components:
+#'   \item{tvem_yhat}{A numeric vector of predictions for the trait based on the TVEM model.}
+#'   \item{corr_train}{A numeric vector of correlations between predicted and actual trait values in the training set for each fold.}
+#'   \item{corr_test}{A numeric vector of correlations between predicted and actual trait values in the test set for each fold.}
+#'   \item{models}{A list of fitted TVEM models for each fold.}
+#'   \item{trait_transformed}{A numeric vector of the transformed trait, aligned across folds.}
+#'
+#' @examples
+#' \dontrun{
+#'   result <- run_tvem_model_cv(idp, trait, age, conf, conf_names, trait_id, remove_age = TRUE, model_age = 1)
+#' }
+#'
+#' @export
 run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
   # training / test set accuracies
