@@ -7,10 +7,7 @@ library(agevarycoef)
 
 source("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/R/prediction.r")
 source("/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/R/data_preparation.r")
-
-data(test_data, package = "agevarycoef")
-#data(test_data_pred, package = "agevarycoef")
-
+load('/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/data/test_data.rda')
 load('/gpfs3/well/win-fmrib-analysis/users/psz102/git_repos/agevarycoef/data/test_data_pred.rda')
 
 n_feat <- 5
