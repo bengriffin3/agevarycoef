@@ -15,7 +15,6 @@ test_that("scale_data_using_train scales correctly", {
 
   message("Current working directory: ", getwd())
   source(here::here("R", "cross_validated_data_preparation.r"))
-  source(here::here("R", "prediction.r"))
 
   # Call the function to scale data using the training set
   scaled_idps <- scale_data_using_train(idps_randomized, id_train_randomized)
@@ -48,6 +47,9 @@ test_that("scale_data_using_train scales correctly", {
 })
 
 test_that("de_mean_trait_using_train correctly demeans the trait vector", {
+
+  message("Current working directory: ", getwd())
+  source(here::here("R", "cross_validated_data_preparation.r"))
 
   # Call the function to de-mean the trait using the training set
   demeaned_trait <- de_mean_trait_using_train(na.omit(trait_randomized), id_train_randomized)

@@ -14,7 +14,7 @@ test_that("elastic net predictions run correctly", {
   source(here::here("R", "data_preparation.r"))
   source(here::here("R", "prediction.r"))
   load('data/test_data.rda')
-  load('test_data_pred.rda')
+  load('data/test_data_pred.rda')
   model_age <- 1
   set.seed(42)
   # determine best features (linear)

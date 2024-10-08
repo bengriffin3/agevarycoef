@@ -33,6 +33,9 @@ jobs:
           install.packages(c('gsubfn', 'caret', 'glmnetUtils', 'here'), repos = 'https://cloud.r-project.org')
         shell: Rscript {0}
 
+      - name: List files in the R directory
+        run: ls -R R
+
       - name: Test coverage
         run: |
           cov <- covr::package_coverage(
@@ -49,9 +52,6 @@ jobs:
           ## --------------------------------------------------------------------
           find '${{ runner.temp }}/package' -name 'testthat.Rout*' -exec cat '{}' \; || true
         shell: bash
-
-      - name: List files in the R directory
-        run: ls -R R
 
       - name: Upload test results
         if: failure()
