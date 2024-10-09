@@ -2,12 +2,18 @@
 % Please edit documentation in R/utils.r
 \name{extractorRData}
 \alias{extractorRData}
-\title{Function for extracting an object from a .RData file created by R's save() command
-Inputs: RData file, object name}
+\title{Extract an object from a .RData file}
 \usage{
 extractorRData(file, object)
 }
+\arguments{
+\item{file}{A character string specifying the path to the RData file.}
+
+\item{object}{A character string specifying the name of the object to extract.}
+}
+\value{
+The object extracted from the RData file.
+}
 \description{
-Function for extracting an object from a .RData file created by R's save() command
-Inputs: RData file, object name
+This function extracts an object from an RData file created by R's save() command.
 }

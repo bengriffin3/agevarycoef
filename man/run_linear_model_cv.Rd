@@ -45,7 +45,3 @@ This function fits a linear model using 10-fold cross-validation. It returns
 predictions, correlations for both training and test sets, and the fitted models
 for each fold.
 }
-\examples{
-result <- run_linear_model_cv(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age)
-print(result$corr_train)
-}

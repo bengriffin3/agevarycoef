@@ -1,17 +1,19 @@
-# Test for remove_nan_sub function
 library(testthat)
 library(agevarycoef)
-source(here::here("R", "data_preparation.r"))
-
-
-# Example data for testing
-idps <- matrix(1:12, nrow = 4, ncol = 3)  # 4 subjects, 3 IDPs
-trait <- c(1, 2, NA, 4)               # Trait vector with one NA value
-age <- c(25, 30, NA, 45)              # Age vector with one NA value
-conf <- matrix(c(1, 2, NA, 4, 1, 2, 3, 4), ncol=2) # Confounders with one NA value
+library(here)
 
 # Test 1: Check that NA values are correctly removed
 test_that("Subjects with missing age or confounders are removed", {
+
+  source(here::here("R", "data_preparation.r"))
+
+  # Example data for testing
+  idps <- matrix(1:12, nrow = 4, ncol = 3)  # 4 subjects, 3 IDPs
+  trait <- c(1, 2, NA, 4)               # Trait vector with one NA value
+  age <- c(25, 30, NA, 45)              # Age vector with one NA value
+  conf <- matrix(c(1, 2, NA, 4, 1, 2, 3, 4), ncol=2) # Confounders with one NA value
+
+
   result <- remove_nan_sub(idps, trait, age, conf)
 
   # Expect 2 subjects to be kept (since 2 rows have NA)
@@ -23,10 +25,10 @@ test_that("Subjects with missing age or confounders are removed", {
 
 # Test 2: Check that IDPs and trait are correctly subsetted when no NA values
 test_that("Correct behavior when no NA values", {
-  idps_clean <- matrix(1:12, nrow=4, ncol=3)  # Clean IDP data
+  idps_clean <- matrix(1:12, nrow = 4, ncol = 3)  # Clean IDP data
   trait_clean <- c(1, 2, 3, 4)
   age_clean <- c(25, 30, 35, 45)
-  conf_clean <- matrix(1:8, nrow=4, ncol=2)  # Clean confounders
+  conf_clean <- matrix(1:8, nrow = 4, ncol = 2)  # Clean confounders
 
   result <- remove_nan_sub(idps_clean, trait_clean, age_clean, conf_clean)
 

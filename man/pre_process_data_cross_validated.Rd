@@ -49,6 +49,3 @@ This function pre-processes imaging-derived phenotypes (IDPs), trait, and confou
 for use in cross-validated models. It includes scaling, deconfounding, and optionally performing
 canonical correlation analysis (CCA) or independent component analysis (ICA).
 }
-\examples{
-preprocessed_data <- pre_process_data_cross_validated(idps, trait, age, conf, conf_names, trait_id, train_idx)
-}

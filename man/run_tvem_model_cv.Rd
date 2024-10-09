@@ -46,9 +46,3 @@ This function performs a 10-fold cross-validation to fit a time-varying effects 
 It supports optional confounder adjustment, alignment of trait directions across folds,
 and provides both training and test set correlations.
 }
-\examples{
-\dontrun{
-  result <- run_tvem_model_cv(idp, trait, age, conf, conf_names, trait_id, remove_age = TRUE, model_age = 1)
-}
-
-}

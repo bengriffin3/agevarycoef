@@ -45,7 +45,3 @@ A list containing:
 \description{
 Fits a spline model with elastic net regularization using 10-fold cross-validation and calculates correlations for both training and test sets.
 }
-\examples{
-result <- run_spline_model_cv_enet(idps, trait, age, conf, conf_names, trait_id, TRUE, TRUE)
-test_predictions <- result$spline_yhat
-}

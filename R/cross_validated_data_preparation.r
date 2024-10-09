@@ -1,5 +1,4 @@
 library(R.matlab)
-library(optparse)
 library(fastICA)
 library(CCA)
 library(logger)
@@ -27,9 +26,6 @@ library(gsubfn)
 #' \item{trait}{Processed trait vector.}
 #' \item{age}{Scaled age vector.}
 #' @export
-#'
-#' @examples
-#' preprocessed_data <- pre_process_data_cross_validated(idps, trait, age, conf, conf_names, trait_id, train_idx)
 
 pre_process_data_cross_validated <- function(idps, trait, age, conf, conf_names, trait_id, train_idx, remove_age=0, ica=0, n_feat=0) {
 
@@ -176,7 +172,7 @@ de_mean_trait_using_train <- function(trait, id_train) {
 confound_selection_using_train <- function(conf, conf_names, id_train, remove_age) {
 
   ### first we do stuff not based on training/test split
-  log_info(paste0("Number of total possible confounds: ", dim(conf)[2]))
+  logger::log_info(paste0("Number of total possible confounds: ", dim(conf)[2]))
 
   # first remove essential confounds
   conf_list <- remove_essential_confounds(conf, conf_names, remove_age)
@@ -201,7 +197,7 @@ confound_selection_using_train <- function(conf, conf_names, id_train, remove_ag
   # Combine essential and reduced confounds
   conf <- cbind(conf_ess, conf_svd)
 
-  log_info(paste0("Number of confounds remaining: ", dim(conf)[2]))
+  logger::log_info(paste0("Number of confounds remaining: ", dim(conf)[2]))
 
   return(conf)
 }
@@ -299,7 +295,7 @@ perform_ica_using_train <- function(idps, id_train, n_feat, upweight = 0) {
   idps_test <- idps[-id_train, ]
 
   # now apply ICA to the PCA'd idps
-  ica_object_idps <- fastICA(idps_train, n_ICs)
+  ica_object_idps <- fastICA::fastICA(idps_train, n_ICs)
   idps_train_ica <- ica_object_idps$S
 
   # idps
@@ -326,7 +322,7 @@ perform_pca_using_train <- function(idps, id_train, n_PCs = 100) {
   idps_test <- idps[-id_train, ]
 
   # perform pca on training data
-  pca_result_x <- prcomp(idps_train, center = TRUE, scale. = TRUE)
+  pca_result_x <- stats::prcomp(idps_train, center = TRUE, scale. = TRUE)
   idps_train_pca <- pca_result_x$x[, 1:n_PCs]
 
   # now apply that same transformation to the test subjects
@@ -351,12 +347,12 @@ upweight_idps_using_train <- function(idps, id_train, trait) {
 
   # split idps and trait into train and test
   idps_train <- idps[id_train, ]
-  idps_test <- idps[-id_train, ]
+  # idps_test <- idps[-id_train, ]
   trait_train <- trait[id_train]
-  trait_test <- trait[-id_train]
+  # trait_test <- trait[-id_train]
 
 
-  idp_weightings <- cor(idps_train, trait_train)^2
+  idp_weightings <- stats::cor(idps_train, trait_train)^2
 
   # weight the features (UDPs)
   idps_weighted <- sweep(idps, 2, idp_weightings, `*`)
@@ -388,7 +384,7 @@ perform_cca_using_train <- function(idps, id_train, trait) {
   trait_test <- trait[-id_train, ]
 
   # perform CCA
-  cc1_train <- cc(idps_pca_train, as.matrix(trait_train))
+  cc1_train <- CCA::cc(idps_pca_train, as.matrix(trait_train))
 
   # note coefficients
   y_coef <- cc1_train$ycoef[, 1]

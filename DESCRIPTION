@@ -6,6 +6,7 @@ Authors@R:
            comment = c(ORCID = "0009-0000-7310-6074"))
 Description: Implements age-varying coefficient models to predict cognitive traits using structural IDPs from the UK Biobank. Provides tools for data preparation, cross-validation, and prediction, with methods for handling missing data and age-dependent relationships between brain structure and cognition.
 License: MIT + file LICENSE
+license_file: LICENSE.md
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
@@ -14,17 +15,13 @@ Suggests:
 Config/testthat/edition: 3
 Imports: 
     CCA,
-    data.table,
+    caret,
     fastICA,
     glmnet,
     gsubfn,
-    knitr,
     lightgbm,
     logger,
-    optparse,
     R.matlab,
     stats,
-    stringr,
-    varycoef,
     xgboost,
     tvem

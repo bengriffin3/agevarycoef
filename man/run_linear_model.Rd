@@ -21,7 +21,3 @@ This function fits a linear model on the training data and uses it to predict
 outcomes for both the training and test data. The predictions are returned alongside
 the fitted linear model object.
 }
-\examples{
-result <- run_linear_model(df_linear, id_train)
-print(result$fit_lm)
-}

@@ -1,15 +1,12 @@
 library(R.matlab)
-library(varycoef)
-library(optparse)
+# library(varycoef)
 library(fastICA)
 library(CCA)
-library(logger)
 library(glmnet)
 library(lightgbm)
 library(xgboost)
 library(data.table)
 library(caret)
-library(glmnetUtils)
 library(tvem)
 library(gsubfn)
 
@@ -25,11 +22,9 @@ library(gsubfn)
 #' @return A list containing:
 #' \item{fit_lm}{The fitted linear model object.}
 #' \item{lm_yhat}{A numeric vector of predictions for both training and test data.}
+#' @importFrom stats lm
+#' @importFrom stats predict
 #' @export
-#'
-#' @examples
-#' result <- run_linear_model(df_linear, id_train)
-#' print(result$fit_lm)
 run_linear_model <- function(df_linear, id_train) {
 
   df_train <- df_linear[id_train, ]
@@ -70,11 +65,9 @@ run_linear_model <- function(df_linear, id_train) {
 #' \item{corr_test}{A numeric vector of correlations between true and predicted values on the test set for each fold.}
 #' \item{models}{A list of fitted linear models for each fold.}
 #' \item{trait_transformed}{A numeric vector of the transformed trait used for prediction.}
+#' @importFrom stats lm
+#' @importFrom stats predict
 #' @export
-#'
-#' @examples
-#' result <- run_linear_model_cv(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age)
-#' print(result$corr_train)
 run_linear_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
   # training / test set accuracies
@@ -87,7 +80,7 @@ run_linear_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
   # Perform 10-fold cross-validation manually to calculate correlations
   lm_yhat <- numeric(length(age)) # to store predictions
   trait_transformed <- numeric(length(age)) # to store predictions
-  folds <- createFolds(age, k = 10)
+  folds <- caret::createFolds(age, k = 10)
   models <- vector("list", 10)  # 10 folds, so 10 models
 
   for (i in seq_along(folds)) {
@@ -113,8 +106,8 @@ run_linear_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
     lm_yhat_test <- predict(fit_lm, newdata = df[test_idx, ])
 
     # Note train/test accuracies
-    corr_train[i] <- cor(df$y[train_idx], lm_yhat_train)
-    corr_test[i] <- cor(df$y[test_idx], lm_yhat_test)
+    corr_train[i] <- stats::cor(df$y[train_idx], lm_yhat_train)
+    corr_test[i] <- stats::cor(df$y[test_idx], lm_yhat_test)
 
     # Store predictions in the original index positions
     lm_yhat[test_idx] <- lm_yhat_test
@@ -137,8 +130,8 @@ calculate_metrics <- function(actual_train, predicted_train, actual_test, predic
   metrics <- list()
 
   # Calculate correlations
-  metrics$corr_train <- cor(actual_train, predicted_train)
-  metrics$corr_test <- cor(actual_test, predicted_test)
+  metrics$corr_train <- stats::cor(actual_train, predicted_train)
+  metrics$corr_test <- stats::cor(actual_test, predicted_test)
 
   # Calculate Mean Squared Error
   metrics$mse_train <- mean((actual_train - predicted_train) ^ 2)
@@ -167,6 +160,7 @@ calculate_metrics <- function(actual_train, predicted_train, actual_test, predic
 #' \item{cvfit_glmnet}{The fitted Elastic Net model.}
 #' \item{yhat_train}{Predictions for the training data.}
 #' \item{yhat_test}{Predictions for the test data.}
+#' @import glmnet
 #' @export
 run_elastic_net_model <- function(idps_linear, trait, id_train, age, model_age) {
 
@@ -177,11 +171,11 @@ run_elastic_net_model <- function(idps_linear, trait, id_train, age, model_age) 
   age_train <- matrix(age[id_train])
 
   if (model_age == 1 ||  model_age == 3) {
-    cvfit_glmnet <- cv.glmnet(cbind(idps_linear_train, age_train), trait_train)
+    cvfit_glmnet <- glmnet::cv.glmnet(cbind(idps_linear_train, age_train), trait_train)
   } else if (model_age == 0) {
-    cvfit_glmnet <- cv.glmnet(idps_linear_train, trait_train)
+    cvfit_glmnet <- glmnet::cv.glmnet(idps_linear_train, trait_train)
   } else if (model_age == 2) {
-    cvfit_glmnet <- cv.glmnet(cbind(rep(1, length(age_train)), age_train), trait_train)
+    cvfit_glmnet <- glmnet::cv.glmnet(cbind(rep(1, length(age_train)), age_train), trait_train)
   }
 
   # enet_coefficients <- coef(cvfit_glmnet, s = "lambda.min") # note betas
@@ -233,6 +227,7 @@ run_elastic_net_model <- function(idps_linear, trait, id_train, age, model_age) 
 #' \item{corr_test}{Test set correlations for each fold.}
 #' \item{models}{List of fitted Elastic Net models for each fold.}
 #' \item{trait_transformed}{Transformed trait used during cross-validation.}
+#' @import glmnet
 #' @export
 run_elastic_net_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age, alpha = 1, n_folds = 10) {
   print("Fitting elastic net model with cross-validation...")
@@ -242,7 +237,7 @@ run_elastic_net_model_cv <- function(idps, trait, age, conf, conf_names, trait_i
   trait_transformed <- numeric(length(age))
 
   # Create folds for cross-validation
-  folds <- createFolds(age, k = n_folds)
+  folds <- caret::createFolds(age, k = n_folds)
 
   # Initialize lists to store models and metrics
   models <- vector("list", n_folds)
@@ -272,12 +267,12 @@ run_elastic_net_model_cv <- function(idps, trait, age, conf, conf_names, trait_i
 
     # Fit the elastic net model
     if (model_age == 1 || model_age == 3) {
-      cvfit_glmnet <- cv.glmnet(cbind(idps_train, age_train), trait_train, alpha = alpha)
+      cvfit_glmnet <- glmnet::cv.glmnet(cbind(idps_train, age_train), trait_train, alpha = alpha)
     } else if (model_age == 0) {
-      cvfit_glmnet <- cv.glmnet(idps_train, trait_train, alpha = alpha)
+      cvfit_glmnet <- glmnet::cv.glmnet(idps_train, trait_train, alpha = alpha)
       # cvfit_glmnet <- cva.glmnet(idps_linear_train, trait_train, alpha = seq(0, 1, 0.05))
     } else if (model_age == 2) {
-      cvfit_glmnet <- cv.glmnet(cbind(rep(1, length(age_train)), age_train), trait_train, alpha = alpha)
+      cvfit_glmnet <- glmnet::cv.glmnet(cbind(rep(1, length(age_train)), age_train), trait_train, alpha = alpha)
     }
 
     # Store the model
@@ -300,8 +295,8 @@ run_elastic_net_model_cv <- function(idps, trait, age, conf, conf_names, trait_i
     trait_transformed[test_idx] <- trait_fold[test_idx]
 
     # Calculate and store performance metrics
-    corr_train[i] <- cor(trait_train, yhat_train)
-    corr_test[i] <- cor(trait_test, yhat_test)
+    corr_train[i] <- stats::cor(trait_train, yhat_train)
+    corr_test[i] <- stats::cor(trait_test, yhat_test)
   }
 
   # Return results
@@ -353,11 +348,12 @@ extract_best_features <- function(corr, n) {
 #' \item{predictions_train}{Predicted values for the training data.}
 #' \item{predictions_test}{Predicted values for the test data.}
 #' \item{lgb_model}{The trained LightGBM model.}
+#' @import lightgbm
 #' @export
 run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y, params = 0) {
 
-  train_lgb <- lgb.Dataset(data = df_all_train_x, label = df_all_train_y)
-  test_lgb <- lgb.Dataset(data = df_all_test_x, label = df_all_test_y)
+  train_lgb <- lightgbm::lgb.Dataset(data = df_all_train_x, label = df_all_train_y)
+  test_lgb <- lightgbm::lgb.Dataset(data = df_all_test_x, label = df_all_test_y)
   if (any(params)) {
     params <- params
   } else {
@@ -376,7 +372,7 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
 }
   print("Running LGBoost")
   # Train the model
-  lgb_model <- lgb.train(
+  lgb_model <- lightgbm::lgb.train(
                          params = params,
                          data = train_lgb,
                          nrounds = 1000,
@@ -411,6 +407,7 @@ run_lgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
 #' \item{mse_test}{Mean squared error on the test set for each fold.}
 #' \item{r_squared_train}{R-squared values for the training set for each fold.}
 #' \item{r_squared_test}{R-squared values for the test set for each fold.}
+#' @import lightgbm
 #' @export
 run_lgboost_model_cv <- function(df_boost, params = NULL, n_folds = 10) {
   print("Running LGBoost with cross-validation...")
@@ -427,7 +424,7 @@ run_lgboost_model_cv <- function(df_boost, params = NULL, n_folds = 10) {
   predictions_test_all <- numeric(nrow(df_boost))
 
   # Generate fold indices
-  folds <- createFolds(df_boost$y, k = n_folds)
+  folds <- caret::createFolds(df_boost$y, k = n_folds)
 
   # Default LightGBM parameters if none are provided
   if (is.null(params)) {
@@ -457,11 +454,11 @@ run_lgboost_model_cv <- function(df_boost, params = NULL, n_folds = 10) {
     df_test_x <- as.matrix(df_boost[test_idx, ][, !names(df_boost[test_idx, ]) %in% c("y")])
     df_test_y <- as.matrix(df_boost[test_idx, ]$y)
 
-    train_lgb <- lgb.Dataset(data = df_train_x, label = df_train_y)
-    test_lgb <- lgb.Dataset(data = df_test_x, label = df_test_y)
+    train_lgb <- lightgbm::lgb.Dataset(data = df_train_x, label = df_train_y)
+    test_lgb <- lightgbm::lgb.Dataset(data = df_test_x, label = df_test_y)
 
     # Train the LightGBM model
-    lgb_model <- lgb.train(
+    lgb_model <- lightgbm::lgb.train(
       params = params,
       data = train_lgb,
       nrounds = 1000,
@@ -478,8 +475,8 @@ run_lgboost_model_cv <- function(df_boost, params = NULL, n_folds = 10) {
     predictions_test_all[test_idx] <- predictions_test
     
     # Note accuracies
-    corr_train[i] <- cor(df_boost$y[train_idx], predictions_train)
-    corr_test[i] <- cor(df_boost$y[test_idx], predictions_test)
+    corr_train[i] <- stats::cor(df_boost$y[train_idx], predictions_train)
+    corr_test[i] <- stats::cor(df_boost$y[test_idx], predictions_test)
     mse_train[i] <- mean((df_boost$y[train_idx] - predictions_train) ^ 2)
     mse_test[i] <- mean((df_boost$y[test_idx] - predictions_test) ^ 2)
     r_squared_train[i] <- 1 - (sum((df_boost$y[train_idx] - predictions_train) ^ 2) / sum((df_boost$y[train_idx] - mean(df_boost$y[train_idx])) ^ 2))
@@ -509,8 +506,8 @@ get_model_stats <- function(predictions_train, predictions_test, df_all_train_y,
   r_squared_train <- 1 - (sum((df_all_train_y - predictions_train) ^ 2) / sum((df_all_train_y - mean(df_all_train_y)) ^ 2))
 
   # Calculate correlation
-  corr_test <- cor(predictions_test, df_all_test_y)
-  corr_train <- cor(predictions_train, df_all_train_y)
+  corr_test <- stats::cor(predictions_test, df_all_test_y)
+  corr_train <- stats::cor(predictions_train, df_all_train_y)
 
   print(paste("Mean Squared Error (TRAIN):", mse_train))
   print(paste("Mean Squared Error (TEST):", mse_test))
@@ -525,7 +522,7 @@ return(list(mse_test = mse_test, mse_train = mse_train, r_squared_test = r_squar
 
 get_cv_model_stats <- function(yhat, trait) {
   # Calculate metrics
-  corr <- cor(yhat, trait)
+  corr <- stats::cor(yhat, trait)
   mse <- mean((yhat - trait) ^ 2)
   r_squared <- 1 - (sum((trait - yhat) ^ 2) / sum((trait - mean(trait)) ^ 2))
 
@@ -550,14 +547,12 @@ get_cv_model_stats <- function(yhat, trait) {
 #'   - predictions_test: Predicted values for the test data.
 #'   - xgb_model: The fitted XGBoost model object.
 #'
-#' @examples
-#' result <- run_xgboost_model(train_x, train_y, test_x, test_y)
-#' predictions <- result$predictions_test
+#' @import xgboost
 #' @export
 run_xgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_all_test_y) {
 
-  dtrain <- xgb.DMatrix(data = df_all_train_x, label = df_all_train_y)
-  dtest <- xgb.DMatrix(data = df_all_test_x, label = df_all_test_y)
+  dtrain <- xgboost::xgb.DMatrix(data = df_all_train_x, label = df_all_train_y)
+  dtest <- xgboost::xgb.DMatrix(data = df_all_test_x, label = df_all_test_y)
 
   # Set XGBoost parameters
   params <- list(
@@ -570,7 +565,7 @@ run_xgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
     colsample_bytree = 0.8           # Subsample ratio of columns when constructing each tree
   )
 
-  xgb_model <- xgb.train(
+  xgb_model <- xgboost::xgb.train(
     params = params,
     data = dtrain,
     nrounds = 40,                    # Number of boosting rounds # 100
@@ -588,28 +583,28 @@ run_xgboost_model <- function(df_all_train_x, df_all_train_y, df_all_test_x, df_
 get_importance_matrix <- function(model, run_svc) {
 
   if (run_svc == 2) {
-    importance_matrix <- lgb.importance(model = model, percentage = TRUE)
+    importance_matrix <- lightgbm::lgb.importance(model = model, percentage = TRUE)
   } else if (run_svc == 3) {
-    importance_matrix <- xgb.importance(model = model)
+    importance_matrix <- xgboost::xgb.importance(model = model)
   }
 
   return(importance_matrix)
 }
 
 get_mean_accuracies_across_cv <- function(corr_train_cv, corr_test_cv, mse_train_cv, mse_test_cv, r_squared_train_cv, r_squared_test_cv) {
-    corr_train <- mean(corr_train_cv)
-    corr_test <- mean(corr_test_cv)
-    mse_train <- mean(mse_train_cv)
-    mse_test <- mean(mse_test_cv)
-    r_squared_train <- mean(r_squared_train_cv)
-    r_squared_test <- mean(r_squared_test_cv)
+  corr_train <- mean(corr_train_cv)
+  corr_test <- mean(corr_test_cv)
+  mse_train <- mean(mse_train_cv)
+  mse_test <- mean(mse_test_cv)
+  r_squared_train <- mean(r_squared_train_cv)
+  r_squared_test <- mean(r_squared_test_cv)
 
-    print(paste("Mean Squared Error (TRAIN):", mse_train))
-    print(paste("Mean Squared Error (TEST):", mse_test))
-    print(paste("R-squared (TRAIN):", r_squared_train))
-    print(paste("R-squared (TEST):", r_squared_test))
-    print(paste("Correlation (TRAIN):", corr_train))
-    print(paste("Correlation (TEST):", corr_test))
+  print(paste("Mean Squared Error (TRAIN):", mse_train))
+  print(paste("Mean Squared Error (TEST):", mse_test))
+  print(paste("R-squared (TRAIN):", r_squared_train))
+  print(paste("R-squared (TEST):", r_squared_test))
+  print(paste("Correlation (TRAIN):", corr_train))
+  print(paste("Correlation (TEST):", corr_test))
 
 return(list(corr_train=corr_train, corr_test=corr_test, mse_train=mse_train, mse_test=mse_test, r_squared_train=r_squared_train, r_squared_test=r_squared_test))
 
@@ -633,10 +628,9 @@ return(list(corr_train=corr_train, corr_test=corr_test, mse_train=mse_train, mse
 #'   - corr_train: Correlations for the training folds.
 #'   - corr_test: Correlations for the test folds.
 #'   - models: List of fitted models for each fold.
-#'
-#' @examples
-#' result <- run_spline_model_cv(idps, trait, age, conf, conf_names, trait_id, TRUE, TRUE)
-#' test_predictions <- result$spline_yhat
+#' @importFrom stats lm
+#' @importFrom stats predict
+#' @import splines
 #' @export
 run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
@@ -652,7 +646,7 @@ run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
   spline_yhat <- numeric(length(age))
 
   # Perform 10-fold cross-validation manually to calculate correlations
-  folds <- createFolds(age, k = 10)
+  folds <- caret::createFolds(age, k = 10)
   models <- vector("list", 10)  # 10 folds, so 10 models
 
   for (i in seq_along(folds)) {
@@ -677,8 +671,8 @@ run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
     print(paste("Spline df: ", spline_df))
 
     # Train the model on the training data
-    fit_spline <- lm(y ~ ns(age, df = spline_df, intercept = TRUE) * structural_IDP, data = df_spline[train_idx, ])
-    # option 2: fit_spline <- lm(y ~ ns(age[train_idx], df = spline_df, intercept = TRUE) * structural_IDP, data = df_spline[train_idx, ])
+    fit_spline <- lm(y ~ splines::ns(age, df = spline_df, intercept = TRUE) * structural_IDP, data = df_spline[train_idx, ])
+    # option 2: fit_spline <- lm(y ~ splines::ns(age[train_idx], df = spline_df, intercept = TRUE) * structural_IDP, data = df_spline[train_idx, ])
     models[[i]] <- fit_spline
 
     # Predictions for the training and test set
@@ -686,8 +680,8 @@ run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
     spline_yhat_test <- predict(fit_spline, newdata = df_spline[test_idx, ])
 
     # Note accuracies
-    corr_train[i] <- cor(df_spline$y[train_idx], spline_yhat_train)
-    corr_test[i] <- cor(df_spline$y[test_idx], spline_yhat_test)
+    corr_train[i] <- stats::cor(df_spline$y[train_idx], spline_yhat_train)
+    corr_test[i] <- stats::cor(df_spline$y[test_idx], spline_yhat_test)
 
     # Store predictions in the original index positions
     spline_yhat[test_idx] <- spline_yhat_test
@@ -722,10 +716,7 @@ run_spline_model_cv <- function(idps, trait, age, conf, conf_names, trait_id, re
 #'   - corr_test_cv: Correlations for the test folds.
 #'   - models: List of fitted models for each fold.
 #'   - trait_transformed: Transformed trait values for the test data.
-#'
-#' @examples
-#' result <- run_spline_model_cv_enet(idps, trait, age, conf, conf_names, trait_id, TRUE, TRUE)
-#' test_predictions <- result$spline_yhat
+#' @import splines
 #' @export
 run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   print("Fitting spline model with 10-fold cross-validation...")
@@ -737,7 +728,7 @@ run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_i
   trait_transformed <- numeric(length(age))
 
   # Perform 10-fold cross-validation manually
-  folds <- createFolds(age, k = 10)
+  folds <- caret::createFolds(age, k = 10)
   models <- vector("list", 10)
 
   for (i in seq_along(folds)) {
@@ -766,7 +757,7 @@ run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_i
     print(paste("Spline df: ", spline_deg_free))
 
     # Create the spline basis matrix for the age variable for training data
-    spline_basis_train <- ns(df_spline$age[train_idx], df = spline_deg_free, intercept = TRUE)
+    spline_basis_train <- splines::ns(df_spline$age[train_idx], df = spline_deg_free, intercept = TRUE)
 
     interaction_terms <- paste0("spline_basis_train * ", idp_columns, collapse = " + ")
 
@@ -774,19 +765,19 @@ run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_i
     if (model_age == 1) {interaction_terms <- paste0("age + ", interaction_terms)}
 
     # Create design matrix for training data
-    X_train <- model.matrix(as.formula(paste("~", interaction_terms, "- 1")), data = df_spline[train_idx, ])
+    X_train <- stats::model.matrix(stats::as.formula(paste("~", interaction_terms, "- 1")), data = df_spline[train_idx, ])
 
 
     # Create the spline basis matrix for test data (using training data)
     spline_basis_test <- predict(spline_basis_train, newx = df_spline$age[test_idx])
     interaction_terms <- paste0("spline_basis_test * ", idp_columns, collapse = " + ")
     if (model_age == 1) {interaction_terms <- paste0("age + ", interaction_terms)}
-    X_test <- model.matrix(as.formula(paste("~", interaction_terms, "- 1")), data = df_spline[test_idx, ])
+    X_test <- stats::model.matrix(stats::as.formula(paste("~", interaction_terms, "- 1")), data = df_spline[test_idx, ])
 
 
     # Fit the model using Ridge regularization (L2)
     # WE USE RIDGE HERE BECAUSE WE ARE DOING UNIVARIATE PREDICTIONS, SO L1 REGULARIZATION IS FUTILE I ASSUME
-    fit_spline <- cv.glmnet(X_train, df_spline$y[train_idx], alpha = 0, nfolds = 10)
+    fit_spline <- glmnet::cv.glmnet(X_train, df_spline$y[train_idx], alpha = 0, nfolds = 10)
     models[[i]] <- fit_spline
 
     # Predictions for the training and test set
@@ -794,8 +785,8 @@ run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_i
     spline_yhat_test <- predict(fit_spline, newx = X_test, s = "lambda.min")
 
     # Note accuracies
-    corr_train_cv[i] <- cor(df_spline$y[train_idx], spline_yhat_train)
-    corr_test_cv[i] <- cor(df_spline$y[test_idx], spline_yhat_test)
+    corr_train_cv[i] <- stats::cor(df_spline$y[train_idx], spline_yhat_train)
+    corr_test_cv[i] <- stats::cor(df_spline$y[test_idx], spline_yhat_test)
 
     # Store predictions in the original index positions
     spline_yhat[test_idx] <- spline_yhat_test
@@ -815,7 +806,7 @@ run_spline_model_cv_enet <- function(idps, trait, age, conf, conf_names, trait_i
 
 determine_optimal_df_spline <- function(df_spline, train_idx) {
 
-  train_control <- trainControl(method = "cv", number = 10)
+  train_control <- caret::trainControl(method = "cv", number = 10)
 
   idp_columns <- grep("^x\\.", names(df_spline), value = TRUE)
 
@@ -829,16 +820,16 @@ determine_optimal_df_spline <- function(df_spline, train_idx) {
   for (df in df_values) {
     # Create the formula dynamically
     # Generate the spline terms
-    spline_term <- paste0("ns(age, df = ", df, ", intercept = TRUE)")
+    spline_term <- paste0("splines::ns(age, df = ", df, ", intercept = TRUE)")
 
     # Create interaction terms with idp_columns
     interaction_terms <- paste0(spline_term, " * ", paste(idp_columns, collapse = " + "))
     
   # Construct the formula
-   formula <- as.formula(paste("y ~", interaction_terms))
+   formula <- stats::as.formula(paste("y ~", interaction_terms))
 
     # Train the model using the dynamically created formula
-    model <- train(formula,
+    model <- caret::train(formula,
                    data = df_spline[train_idx, ],
                    method = "lm",
                    trControl = train_control)
@@ -867,8 +858,8 @@ interpolate_predictions <- function(model, ages, idp_values) {
   beta_intercept <- model$grid_fitted_coefficients$`(Intercept)`$estimate
 
   # Interpolate to find the coefficients for the given ages
-  interpolated_idp <- approx(time_grid, beta_idp, xout = ages, rule = 2)$y
-  interpolated_intercept <- approx(time_grid, beta_intercept, xout = ages, rule = 2)$y
+  interpolated_idp <- stats::approx(time_grid, beta_idp, xout = ages, rule = 2)$y
+  interpolated_intercept <- stats::approx(time_grid, beta_intercept, xout = ages, rule = 2)$y
 
   # Calculate the predictions
   predictions <- interpolated_intercept + interpolated_idp * idp_values
@@ -899,11 +890,6 @@ interpolate_predictions <- function(model, ages, idp_values) {
 #'   \item{models}{A list of fitted TVEM models for each fold.}
 #'   \item{trait_transformed}{A numeric vector of the transformed trait, aligned across folds.}
 #'
-#' @examples
-#' \dontrun{
-#'   result <- run_tvem_model_cv(idp, trait, age, conf, conf_names, trait_id, remove_age = TRUE, model_age = 1)
-#' }
-#'
 #' @export
 run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
   # We manually do the cross-validation so we can look at the predictions and compare
@@ -917,7 +903,7 @@ run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remov
   # Perform 10-fold cross-validation manually to calculate correlations
   tvem_yhat <- numeric(length(age)) # to store predictions
   trait_transformed <- numeric(length(age)) # to store predictions
-  folds <- createFolds(age, k = 10)
+  folds <- caret::createFolds(age, k = 10)
   models <- vector("list", 10)  # 10 folds, so 10 models
 
   # Use the first fold as a reference for aligning the trait direction
@@ -938,7 +924,7 @@ run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remov
       reference_trait <- trait_fold
     } else {
       # Align current fold's trait direction with the reference trait direction
-      if (cor(trait_fold, reference_trait) < 0) {
+      if (stats::cor(trait_fold, reference_trait) < 0) {
         trait_fold <- -trait_fold
       }
     }
@@ -977,8 +963,8 @@ run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remov
     tvem_yhat_test <- interpolate_predictions(fit_tvem, df$age[test_idx], df$idps_fold[test_idx])
 
     # Note train/test accuracies
-    corr_train[i] <- cor(df$y[train_idx], tvem_yhat_train)
-    corr_test[i] <- cor(df$y[test_idx], tvem_yhat_test)
+    corr_train[i] <- stats::cor(df$y[train_idx], tvem_yhat_train)
+    corr_test[i] <- stats::cor(df$y[test_idx], tvem_yhat_test)
 
     print(paste("corr fold (train):", corr_train[i]))
     print(paste("corr fold (test):", corr_test[i]))
@@ -998,103 +984,103 @@ run_tvem_model_cv <- function(idp, trait, age, conf, conf_names, trait_id, remov
   ))
 }
 
-run_tvem_model_cv_2 <- function(idp, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
-  print("Fitting time-varying effects model with 10-fold cross-validation...")
+# run_tvem_model_cv_2 <- function(idp, trait, age, conf, conf_names, trait_id, remove_age, model_age) {
+#   print("Fitting time-varying effects model with 10-fold cross-validation...")
 
-  # Initialize vectors to store correlations for each fold
-  corr_train <- numeric(10)
-  corr_test <- numeric(10)
+#   # Initialize vectors to store correlations for each fold
+#   corr_train <- numeric(10)
+#   corr_test <- numeric(10)
 
-  # Perform 10-fold cross-validation manually to calculate correlations
-  tvem_yhat <- numeric(length(age)) # to store predictions
-  trait_transformed <- numeric(length(age)) # to store predictions
-  folds <- createFolds(age, k = 10)
-  models <- vector("list", 10)  # 10 folds, so 10 models
+#   # Perform 10-fold cross-validation manually to calculate correlations
+#   tvem_yhat <- numeric(length(age)) # to store predictions
+#   trait_transformed <- numeric(length(age)) # to store predictions
+#   folds <- caret::createFolds(age, k = 10)
+#   models <- vector("list", 10)  # 10 folds, so 10 models
 
-  # Use the first fold as a reference for aligning the trait direction
-  reference_trait <- NULL
+#   # Use the first fold as a reference for aligning the trait direction
+#   reference_trait <- NULL
 
-  for (i in seq_along(folds)) {
-    print(paste("Fold", i))
-    test_idx <- folds[[i]]
-    train_idx <- setdiff(seq_along(age), test_idx)
+#   for (i in seq_along(folds)) {
+#     print(paste("Fold", i))
+#     test_idx <- folds[[i]]
+#     train_idx <- setdiff(seq_along(age), test_idx)
 
-    preprocessed_data <- pre_process_data_cross_validated(idp, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
-    idps_fold <- preprocessed_data$idps
-    trait_fold <- preprocessed_data$trait
-    age_fold <- preprocessed_data$age
+#     preprocessed_data <- pre_process_data_cross_validated(idp, trait, age, conf, conf_names, trait_id, train_idx, remove_age, ica=0, n_feat=0)
+#     idps_fold <- preprocessed_data$idps
+#     trait_fold <- preprocessed_data$trait
+#     age_fold <- preprocessed_data$age
 
-    # Use the first fold's trait direction as the reference
-    if (is.null(reference_trait)) {
-      reference_trait <- trait_fold
-    } else {
-      if (cor(trait_fold, reference_trait) < 0) {
-        trait_fold <- -trait_fold
-      }
-    }
+#     # Use the first fold's trait direction as the reference
+#     if (is.null(reference_trait)) {
+#       reference_trait <- trait_fold
+#     } else {
+#       if (stats::cor(trait_fold, reference_trait) < 0) {
+#         trait_fold <- -trait_fold
+#       }
+#     }
 
-    # Generate subject IDs based on the number of subjects in the fold
-    subject_id <- seq_along(trait_fold)
+#     # Generate subject IDs based on the number of subjects in the fold
+#     subject_id <- seq_along(trait_fold)
 
-    # Create dataframe with subject_id included
-    df <- data.frame(subject_id = subject_id, y = trait_fold, idps_fold)
-    df <- prepare_age_data(df, age_fold, 1)
+#     # Create dataframe with subject_id included
+#     df <- data.frame(subject_id = subject_id, y = trait_fold, idps_fold)
+#     df <- prepare_age_data(df, age_fold, 1)
 
-    df_train <- df[train_idx, ]
+#     df_train <- df[train_idx, ]
 
-    print(head(df_train))
+#     print(head(df_train))
 
-    # Train the model on the training fold (and save model info)
-    if (model_age == 0) {
-      print("test")
-      fit_tvem <- run_tvem(df_train)
-      # fit_tvem <- tvem::select_tvem(data = df_train,
-      #                formula = y ~ idps_fold,
-      #                id = subject_id,
-      #                time = age)
-      print("test2")
-                     #grid = length(trait_fold),
-                     #max_knots = 5)
-      # fit_tvem <- tvem::tvem(data = df_train,
-      #                formula = y ~ idps_fold,
-      #                id = subject_id,
-      #                time = age,
-      #                grid = length(trait_fold),
-      #                num_knots = 1)
-    } else if (model_age == 1) {
-      fit_tvem <- tvem::select_tvem(data = df_train,
-                     formula = y ~ idps_fold,
-                     id = subject_id,
-                     time = age,
-                     spline_order = 3,
-                     grid = length(trait_fold),
-                     max_knots = 1)
-    }
+#     # Train the model on the training fold (and save model info)
+#     if (model_age == 0) {
+#       print("test")
+#       fit_tvem <- run_tvem(df_train)
+#       # fit_tvem <- tvem::select_tvem(data = df_train,
+#       #                formula = y ~ idps_fold,
+#       #                id = subject_id,
+#       #                time = age)
+#       print("test2")
+#                      #grid = length(trait_fold),
+#                      #max_knots = 5)
+#       # fit_tvem <- tvem::tvem(data = df_train,
+#       #                formula = y ~ idps_fold,
+#       #                id = subject_id,
+#       #                time = age,
+#       #                grid = length(trait_fold),
+#       #                num_knots = 1)
+#     } else if (model_age == 1) {
+#       fit_tvem <- tvem::select_tvem(data = df_train,
+#                      formula = y ~ idps_fold,
+#                      id = subject_id,
+#                      time = age,
+#                      spline_order = 3,
+#                      grid = length(trait_fold),
+#                      max_knots = 1)
+#     }
 
-    models[[i]] <- fit_tvem
+#     models[[i]] <- fit_tvem
 
-    # Predictions for the training and test set
-    tvem_yhat_train <- interpolate_predictions(fit_tvem, df$age[train_idx], df$idps_fold[train_idx])
-    tvem_yhat_test <- interpolate_predictions(fit_tvem, df$age[test_idx], df$idps_fold[test_idx])
+#     # Predictions for the training and test set
+#     tvem_yhat_train <- interpolate_predictions(fit_tvem, df$age[train_idx], df$idps_fold[train_idx])
+#     tvem_yhat_test <- interpolate_predictions(fit_tvem, df$age[test_idx], df$idps_fold[test_idx])
 
-    # Note train/test accuracies
-    corr_train[i] <- cor(df$y[train_idx], tvem_yhat_train)
-    corr_test[i] <- cor(df$y[test_idx], tvem_yhat_test)
+#     # Note train/test accuracies
+#     corr_train[i] <- stats::cor(df$y[train_idx], tvem_yhat_train)
+#     corr_test[i] <- stats::cor(df$y[test_idx], tvem_yhat_test)
 
-    print(paste("corr fold (train):", corr_train[i]))
-    print(paste("corr fold (test):", corr_test[i]))
+#     print(paste("corr fold (train):", corr_train[i]))
+#     print(paste("corr fold (test):", corr_test[i]))
 
-    # Store predictions in the original index positions
-    tvem_yhat[test_idx] <- tvem_yhat_test
-    trait_transformed[test_idx] <- trait_fold[test_idx]
-  }
+#     # Store predictions in the original index positions
+#     tvem_yhat[test_idx] <- tvem_yhat_test
+#     trait_transformed[test_idx] <- trait_fold[test_idx]
+#   }
 
-  # Return the fitted model, predictions, and accuracies
-  return(list(
-    tvem_yhat = tvem_yhat,
-    corr_train = corr_train,
-    corr_test = corr_test,
-    models = models,
-    trait_transformed = trait_transformed
-  ))
-}
+#   # Return the fitted model, predictions, and accuracies
+#   return(list(
+#     tvem_yhat = tvem_yhat,
+#     corr_train = corr_train,
+#     corr_test = corr_test,
+#     models = models,
+#     trait_transformed = trait_transformed
+#   ))
+# }

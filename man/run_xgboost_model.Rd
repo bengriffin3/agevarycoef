@@ -26,7 +26,3 @@ A list containing:
 \description{
 Trains an XGBoost model using the provided training data and tests the model on the provided test data.
 }
-\examples{
-result <- run_xgboost_model(train_x, train_y, test_x, test_y)
-predictions <- result$predictions_test
-}

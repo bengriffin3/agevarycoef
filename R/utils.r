@@ -44,10 +44,16 @@ check_for_existing_model <- function(proj_dir, trait_id, n_feat, n_sub, perc_tra
 
 }
 
+#' Extract an object from a .RData file
+#'
+#' This function extracts an object from an RData file created by R's save() command.
+#'
+#' @param file A character string specifying the path to the RData file.
+#' @param object A character string specifying the name of the object to extract.
+#' @return The object extracted from the RData file.
+#' @export
 extractorRData <- function(file, object) {
-      #' Function for extracting an object from a .RData file created by R's save() command
-      #' Inputs: RData file, object name
-      E <- new.env()
-      load(fil = file, envir = E)
-      return(get(object, envir = E, inherits = F))
-    }
+  E <- new.env()
+  load(file = file, envir = E)
+  return(get(object, envir = E, inherits = F))
+}

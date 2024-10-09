@@ -6,14 +6,14 @@ load_prediction_variables <- function(n_subjects, proj_dir) {
   # Load the mat file
   if (n_subjects <= 5000) {
     print(n_subjects)
-    data <- readMat(paste0(proj_dir, "/data/prediction_vars_5000_NEW.mat"))
+    data <- R.matlab::readMat(paste0(proj_dir, "/data/prediction_vars_5000_NEW.mat"))
   } else if (n_subjects > 5000 && n_subjects <= 20000) {
-    data <- readMat(paste0(proj_dir, "/data/prediction_vars_20000_NEW.mat"))
+    data <- R.matlab::readMat(paste0(proj_dir, "/data/prediction_vars_20000_NEW.mat"))
   } else if (n_subjects > 20000) {
-    data <- readMat(paste0(proj_dir, "/data/prediction_vars_NEW.mat"))
+    data <- R.matlab::readMat(paste0(proj_dir, "/data/prediction_vars_NEW.mat"))
   }
   # note index of best 30 traits
-  idx30 <- readMat(paste0(proj_dir, "/data/idx_30.mat"))
+  idx30 <- R.matlab::readMat(paste0(proj_dir, "/data/idx_30.mat"))
   data$idx30 <- idx30$idx
 
   return(data)
@@ -22,11 +22,11 @@ load_prediction_variables <- function(n_subjects, proj_dir) {
 load_cog_variables <- function(n_subjects, proj_dir) {
   # load cognitive vars
   if (n_subjects <= 1000) {
-    data <- readMat(paste0(proj_dir, "/data/cognitive_vars_1000.mat"))
+    data <- R.matlab::readMat(paste0(proj_dir, "/data/cognitive_vars_1000.mat"))
   } else if (n_subjects <= 20000) {
-    data <- readMat(paste0(proj_dir, "/data/cognitive_vars_20000.mat"))
+    data <- R.matlab::readMat(paste0(proj_dir, "/data/cognitive_vars_20000.mat"))
   } else {
-    data <- readMat(paste0(proj_dir, "/data/cognitive_vars.mat"))
+    data <- R.matlab::readMat(paste0(proj_dir, "/data/cognitive_vars.mat"))
   }
   return(data)
 }
@@ -41,7 +41,7 @@ get_top_30_cog_vars <- function(data, n_sub, proj_dir) {
 
 remove_nan_sub <- function(idps, trait, age, conf) {
 
-  idx_keep <- complete.cases(age, conf) #idx_keep <- complete.cases(idps, trait, age, conf)
+  idx_keep <- stats::complete.cases(age, conf) #idx_keep <- stats::complete.cases(idps, trait, age, conf)
 
   if (is.array(idps)) {
     idps <- idps[idx_keep, ]
@@ -59,9 +59,9 @@ remove_nan_sub <- function(idps, trait, age, conf) {
 
   list_vars <- mget(c("idps", "trait", "age", "conf"))
 
-  log_warn(paste0("Number of subjects removed due to missing age: ", sum(!idx_keep)))
-  log_info(paste0("Number of subjects remaining: ", dim(idps)[1]))
-  log_info(paste0("Number of features/IDPs: ", dim(idps)[2]))
+  logger::log_warn(paste0("Number of subjects removed due to missing age: ", sum(!idx_keep)))
+  logger::log_info(paste0("Number of subjects remaining: ", dim(idps)[1]))
+  logger::log_info(paste0("Number of features/IDPs: ", dim(idps)[2]))
 
 
   return(list_vars)
@@ -78,6 +78,16 @@ get_training_sample_id <- function(trait, prop_train) {
   return(id_train)
 }
 
+#' Get traits based on the specified trait_id.
+#'
+#' @name get_traits
+#' @param data The input data containing traits.
+#' @param trait_id The identifier for the trait to load.
+#' @param proj_dir The project directory path.
+#' @param n_sub The number of subjects.
+#' @return A vector of traits.
+#' @importFrom utils globalVariables
+utils::globalVariables("simulated_trait")
 get_traits <- function(data, trait_id, proj_dir, n_sub) {
 
   # load traits
@@ -99,7 +109,7 @@ get_traits <- function(data, trait_id, proj_dir, n_sub) {
 
 perform_pca <- function(idps, n_feat) {
 
-  pca_result <- prcomp(idps, center = TRUE, scale. = TRUE)
+  pca_result <- stats::prcomp(idps, center = TRUE, scale. = TRUE)
   idps <- pca_result$x[, 1:n_feat]
   return(idps)
 }
@@ -208,7 +218,7 @@ unpack_data <- function(proj_dir, data, trait_id, n_sub) {
 
 get_x_pcs <- function(x, n_pc_comp) {
   # perform PCA including de-meaning and setting unit variance
-  pca_result_x <- prcomp(x, center = TRUE, scale. = TRUE)
+  pca_result_x <- stats::prcomp(x, center = TRUE, scale. = TRUE)
 
   # note down the PCs
   x_pca <- pca_result_x$x[, 1:n_pc_comp]
@@ -236,7 +246,7 @@ perform_pca_after_feature_engineering <- function(df_all) {
 
   features_for_pca <- names(df_all)[!names(df_all) %in% c("y", "age", "age_squared")]
 
-  pca_result_x <- prcomp(df_all[, features_for_pca], center = TRUE, scale. = TRUE)  # Scaling is recommended
+  pca_result_x <- stats::prcomp(df_all[, features_for_pca], center = TRUE, scale. = TRUE)  # Scaling is recommended
   pca_components <- as.data.frame(pca_result_x$x[, 1:600])
   df_all <- df_all[, !(names(df_all) %in% features_for_pca)]
   df_all <- cbind(df_all, pca_components)
@@ -273,7 +283,7 @@ prepare_boost_data <- function(df, id_train, trait_all, age_all, model_age, n_fe
 
   # if model_age == 0, we just leave it as it is, then 1 = model age, 2 = only model age, 3 = fixed with varying?
   if (model_age == 1) {
-    df$age <- (age_all - mean(age_all)) / sd(age_all) # add age as a feature
+    df$age <- (age_all - mean(age_all)) / stats::sd(age_all) # add age as a feature
   } else if (model_age == 2) {
     df <- data.frame(y = trait_all, x = age_all)
   } else if (model_age == 3) {
@@ -338,11 +348,11 @@ simulate_linear_trait <- function(age, features) {
 
   # Assign coefficients
   coeff_age <- 0.6
-  #coeff_X <- runif(n_feat, min = -0.01, max = 0.0001)  # Random coefficients between 0.05 and 0.3
-  coeff_X <- runif(n_feat, min = 0, max = 0.0)  # Random coefficients between 0.05 and 0.3
+  #coeff_X <- stats::runif(n_feat, min = -0.01, max = 0.0001)  # Random coefficients between 0.05 and 0.3
+  coeff_X <- stats::runif(n_feat, min = 0, max = 0.0)  # Random coefficients between 0.05 and 0.3
 
   # Simulate noise
-  noise <- rnorm(n, mean = 0, sd = 1)
+  noise <- stats::rnorm(n, mean = 0, sd = 1)
 
   trait <- coeff_age * age_imputed + features_imputed %*% coeff_X + noise
 
@@ -383,7 +393,7 @@ impute_and_filter_data <- function(idps, trait, age, conf, max_nans = 1000) {
   # Impute the missing values in the filtered dataset
   idps_imputed <- impute_with_mean(idps_filtered, idps_means)
 
-  #log_warn(paste0("Number of subjects removed due to missing idp/trait: ", sum(!keep_mask)))
+  #logger::log_warn(paste0("Number of subjects removed due to missing idp/trait: ", sum(!keep_mask)))
 
   return(list(idps = idps_imputed, trait = trait_filtered, age = age_filtered, conf = conf_filtered))
 }
