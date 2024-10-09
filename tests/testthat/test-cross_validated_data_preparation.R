@@ -1,12 +1,10 @@
 library(testthat)
 library(R.matlab)
 library(agevarycoef)
-library(here)
 
 test_that("scale_data_using_train scales correctly", {
 
   message("Current working directory: ", getwd())
-  source(here::here("R", "cross_validated_data_preparation.r"))
 
   # Simulate random matrix for IDPs (e.g., 10 subjects and 3 IDPs)
   set.seed(123)  # For reproducibility
@@ -49,7 +47,6 @@ test_that("scale_data_using_train scales correctly", {
 test_that("de_mean_trait_using_train correctly demeans the trait vector", {
 
   message("Current working directory: ", getwd())
-  source(here::here("R", "cross_validated_data_preparation.r"))
 
   # Simulate random vector for trait (e.g., 10 subjects)
   set.seed(123)  # For reproducibility

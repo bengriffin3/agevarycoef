@@ -2,7 +2,7 @@ library(R.matlab)
 library(fastICA)
 library(CCA)
 library(logger)
-library(gsubfn)
+# library(gsubfn)
 
 #' Pre-process Data for Cross-Validated Model
 #'

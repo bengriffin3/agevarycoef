@@ -1,11 +1,8 @@
 library(testthat)
 library(agevarycoef)
-library(here)
 
 # Test 1: Check that NA values are correctly removed
 test_that("Subjects with missing age or confounders are removed", {
-
-  source(here::here("R", "data_preparation.r"))
 
   # Example data for testing
   idps <- matrix(1:12, nrow = 4, ncol = 3)  # 4 subjects, 3 IDPs

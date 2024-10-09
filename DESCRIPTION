@@ -18,7 +18,6 @@ Imports:
     caret,
     fastICA,
     glmnet,
-    gsubfn,
     lightgbm,
     logger,
     R.matlab,

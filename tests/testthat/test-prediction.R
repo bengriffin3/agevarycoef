@@ -4,27 +4,24 @@ library(R.matlab)
 # library(varycoef)
 library(glmnet)
 library(agevarycoef)
-library(here)
 
 test_that("elastic net predictions run correctly", {
 
   message("Current working directory: ", getwd())
-  source(here::here("R", "data_preparation.r"))
-  source(here::here("R", "prediction.r"))
-  # load(here::here("data", "test_data.rda"))
-  # load(here::here("data", "test_data_pred.rda"))
 
   set.seed(42)
 
   # Simulate data
   n_samples <- 10000  # Number of samples
-  n_idps <- 10      # Number of IDPs
+  n_idps <- 10        # Number of IDPs
 
-  # Simulated IDPs (e.g., 100 samples with 10 IDPs)
+  # Simulated IDPs
+  set.seed(42)  # For reproducibility
   idps_randomized <- matrix(rnorm(n_samples * n_idps), nrow = n_samples, ncol = n_idps)
 
-  # Simulated trait (response variable)
-  trait_randomized <- rnorm(n_samples)
+  # Simulated trait (response variable) with correlation to the first 5 IDPs
+  # Create a trait that is a linear combination of the first 5 IDPs
+  trait_randomized <- rowSums(idps_randomized[, 1:5]) * 2 + rnorm(n_samples, mean = 0, sd = 5)  # Linear combination with noise
 
   # Simulated ages
   age_randomized <- sample(20:70, n_samples, replace = TRUE)  # Random ages between 20 and 70
@@ -32,13 +29,14 @@ test_that("elastic net predictions run correctly", {
   # Randomly assign training indices
   id_train_randomized <- sample(1:n_samples, size = round(0.7 * n_samples))  # 70% training data
 
+  # Prepare the training data frame with the response variable
   df_train_randomized <- data.frame(
-    y = trait_randomized + rnorm(n_samples, mean = 0, sd = 10)  # response variable with noise
+    y = trait_randomized  # response variable
   )
-  
-  # Add 1435 random predictors
+
+  # Add IDPs to the training data frame
   for (i in 1:n_idps) {
-    df_train_randomized[[paste0("x.", i)]] <- rnorm(n_samples)
+    df_train_randomized[[paste0("x.", i)]] <- idps_randomized[, i]
   }
 
   model_age <- 1
@@ -62,8 +60,8 @@ test_that("elastic net predictions run correctly", {
   corr_train <- model_results$corr_train
   corr_test <- model_results$corr_test
 
-  expected_corr_train <- 0.13833
-  expected_corr_test <- 0.11169
+  expected_corr_train <- 0.66772
+  expected_corr_test <- 0.64483
 
   # Actual values (assume these are calculated in your function)
   actual_corr_train <- corr_train
